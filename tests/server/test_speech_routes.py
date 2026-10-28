@@ -1,7 +1,9 @@
 """Tests for speech API endpoints."""
 
 import asyncio
+import threading
 import time
+from concurrent.futures import ThreadPoolExecutor
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -160,6 +162,358 @@ def test_health_no_backend():
     assert response.status_code == 200
     data = response.json()
     assert data["available"] is False
+
+
+def test_health_reports_warmup_without_forcing_another_model_load():
+    from fastapi import FastAPI
+
+    from openjarvis.server.api_routes import speech_router
+
+    backend = MagicMock()
+    backend.backend_id = "faster-whisper"
+    app = FastAPI()
+    app.state.speech_backend = backend
+    app.state.voice_warmup_status = {
+        "status": "loading",
+        "stt": "loading",
+        "tts": "pending",
+    }
+    app.include_router(speech_router)
+
+    response = TestClient(app).get("/v1/speech/health")
+
+    assert response.status_code == 200
+    assert response.json()["warmup"]["stt"] == "loading"
+    backend.health.assert_not_called()
+
+
+def _voice_warmup_app(*, stt_loader, tts_backend, preferred):
+    return SimpleNamespace(
+        state=SimpleNamespace(
+            speech_backend=SimpleNamespace(_ensure_model=stt_loader),
+            config=SimpleNamespace(
+                speech=SimpleNamespace(
+                    tts_backend=preferred,
+                    voice_id="pf_dora",
+                    voice_speed=1.0,
+                )
+            ),
+            _voice_warmup_lock=threading.Lock(),
+            voice_warmup_status={
+                "status": "pending",
+                "stt": "pending",
+                "tts": "pending",
+            },
+            _tts_resolution_lock=threading.Lock(),
+            tts_backend=tts_backend,
+            tts_resolved=tts_backend is not None,
+        )
+    )
+
+
+def test_voice_warmup_uses_kokoro_and_skips_api_backends():
+    from openjarvis.server.app import _warm_voice_models
+
+    stt_loader = MagicMock()
+    kokoro = MagicMock()
+    kokoro.backend_id = "kokoro"
+    local_app = _voice_warmup_app(
+        stt_loader=stt_loader,
+        tts_backend=kokoro,
+        preferred="kokoro",
+    )
+
+    _warm_voice_models(local_app)
+
+    stt_loader.assert_called_once_with()
+    kokoro.synthesize.assert_called_once_with(
+        "Olá.",
+        voice_id="pf_dora",
+        speed=1.0,
+        output_format="wav",
+    )
+    assert local_app.state.voice_warmup_status == {
+        "status": "ready",
+        "stt": "ready",
+        "tts": "ready",
+    }
+
+    cloud_app = _voice_warmup_app(
+        stt_loader=MagicMock(),
+        tts_backend=None,
+        preferred="openai_tts",
+    )
+    _warm_voice_models(cloud_app)
+    assert cloud_app.state.voice_warmup_status["tts"] == "skipped"
+
+
+def test_voice_warmup_failure_does_not_raise_or_skip_other_local_backend():
+    from openjarvis.server.app import _warm_voice_models
+
+    stt_loader = MagicMock(side_effect=RuntimeError("model unavailable"))
+    kokoro = MagicMock()
+    kokoro.backend_id = "kokoro"
+    app = _voice_warmup_app(
+        stt_loader=stt_loader,
+        tts_backend=kokoro,
+        preferred="kokoro",
+    )
+
+    _warm_voice_models(app)
+
+    assert app.state.voice_warmup_status == {
+        "status": "failed",
+        "stt": "failed",
+        "tts": "ready",
+    }
+    kokoro.synthesize.assert_called_once()
+
+
+def test_voice_warmup_environment_defaults_on_and_accepts_false_values(monkeypatch):
+    from openjarvis.server.app import _voice_warmup_enabled
+
+    monkeypatch.delenv("MEGA_VOICE_WARMUP", raising=False)
+    assert _voice_warmup_enabled()
+    for value in ("0", "false", "no", "off"):
+        assert not _voice_warmup_enabled(value)
+    for value in ("1", "true", "yes", "on"):
+        assert _voice_warmup_enabled(value)
+
+
+def _voice_warmup_lifespan_app(tmp_path, speech_backend, config):
+    from openjarvis.server.app import create_app
+    from openjarvis.server.auth_store import AuthStore
+
+    return create_app(
+        MagicMock(),
+        "test-model",
+        config=config,
+        speech_backend=speech_backend,
+        auth_store=AuthStore(tmp_path / "voice-warmup-auth.db"),
+    )
+
+
+def test_app_lifespan_starts_with_voice_warmup_enabled(
+    tmp_path, monkeypatch
+):
+    monkeypatch.delenv("PYTEST_CURRENT_TEST", raising=False)
+    monkeypatch.setenv("MEGA_VOICE_WARMUP", "1")
+    stt_backend = MagicMock()
+    stt_backend.backend_id = "faster-whisper"
+    tts_backend = MagicMock()
+    tts_backend.backend_id = "kokoro"
+    config = SimpleNamespace(
+        speech=SimpleNamespace(
+            tts_backend="kokoro",
+            voice_id="pf_dora",
+            voice_speed=1.0,
+        )
+    )
+    app = _voice_warmup_lifespan_app(tmp_path, stt_backend, config)
+
+    with patch(
+        "openjarvis.server.api_routes._resolve_tts_backend_sync",
+        return_value=tts_backend,
+    ):
+        with TestClient(app) as client:
+            assert client.get("/health").status_code == 200
+            warmup_thread = app.state.voice_warmup_thread
+            warmup_thread.join(timeout=5)
+            assert not warmup_thread.is_alive()
+            registration = client.post(
+                "/auth/register",
+                json={"name": "voice-admin", "password": "safePass123"},
+            )
+            assert registration.status_code == 201
+            login = client.post(
+                "/auth/login",
+                json={"name": "voice-admin", "password": "safePass123"},
+            )
+            assert login.status_code == 200
+            speech_health = client.get("/v1/speech/health")
+            assert speech_health.status_code == 200
+            assert speech_health.json()["warmup"] == {
+                "status": "ready",
+                "stt": "ready",
+                "tts": "ready",
+            }
+
+    stt_backend._ensure_model.assert_called_once()
+    tts_backend.synthesize.assert_called_once_with(
+        "Olá.",
+        voice_id="pf_dora",
+        speed=1.0,
+        output_format="wav",
+    )
+    assert app.state.voice_warmup_status == {
+        "status": "ready",
+        "stt": "ready",
+        "tts": "ready",
+    }
+
+
+def test_app_lifespan_starts_when_voice_warmup_is_disabled(tmp_path, monkeypatch):
+    monkeypatch.delenv("PYTEST_CURRENT_TEST", raising=False)
+    monkeypatch.setenv("MEGA_VOICE_WARMUP", "0")
+    stt_backend = MagicMock()
+    config = SimpleNamespace(
+        speech=SimpleNamespace(
+            tts_backend="openai_tts",
+            voice_id="",
+            voice_speed=1.0,
+        )
+    )
+    app = _voice_warmup_lifespan_app(tmp_path, stt_backend, config)
+
+    with TestClient(app) as client:
+        assert client.get("/health").status_code == 200
+
+    assert app.state.voice_warmup_status == {
+        "status": "disabled",
+        "stt": "disabled",
+        "tts": "disabled",
+    }
+    assert not hasattr(app.state, "voice_warmup_thread")
+    stt_backend._ensure_model.assert_not_called()
+
+
+def test_app_lifespan_survives_voice_warmup_backend_failures(
+    tmp_path, monkeypatch, caplog
+):
+    monkeypatch.delenv("PYTEST_CURRENT_TEST", raising=False)
+    monkeypatch.setenv("MEGA_VOICE_WARMUP", "1")
+    stt_backend = MagicMock()
+    stt_backend.backend_id = "faster-whisper"
+    stt_backend._ensure_model.side_effect = RuntimeError("STT unavailable")
+    tts_backend = MagicMock()
+    tts_backend.backend_id = "kokoro"
+    tts_backend.synthesize.side_effect = RuntimeError("TTS unavailable")
+    config = SimpleNamespace(
+        speech=SimpleNamespace(
+            tts_backend="kokoro",
+            voice_id="pf_dora",
+            voice_speed=1.0,
+        )
+    )
+    app = _voice_warmup_lifespan_app(tmp_path, stt_backend, config)
+
+    with patch(
+        "openjarvis.server.api_routes._resolve_tts_backend_sync",
+        return_value=tts_backend,
+    ):
+        with TestClient(app) as client:
+            assert client.get("/health").status_code == 200
+            warmup_thread = app.state.voice_warmup_thread
+            warmup_thread.join(timeout=5)
+            assert not warmup_thread.is_alive()
+
+    assert app.state.voice_warmup_status == {
+        "status": "failed",
+        "stt": "failed",
+        "tts": "failed",
+    }
+    assert "STT model warm-up failed" in caplog.text
+    assert "Local TTS model warm-up failed" in caplog.text
+
+
+def test_app_lifespan_survives_unexpected_voice_warmup_exception(
+    tmp_path, monkeypatch, caplog
+):
+    monkeypatch.delenv("PYTEST_CURRENT_TEST", raising=False)
+    monkeypatch.setenv("MEGA_VOICE_WARMUP", "1")
+    config = SimpleNamespace(
+        speech=SimpleNamespace(
+            tts_backend="openai_tts",
+            voice_id="",
+            voice_speed=1.0,
+        )
+    )
+    app = _voice_warmup_lifespan_app(tmp_path, MagicMock(), config)
+
+    with patch(
+        "openjarvis.server.app._warm_voice_models",
+        side_effect=RuntimeError("unexpected worker failure"),
+    ):
+        with TestClient(app) as client:
+            assert client.get("/health").status_code == 200
+            warmup_thread = app.state.voice_warmup_thread
+            warmup_thread.join(timeout=5)
+            assert not warmup_thread.is_alive()
+
+    assert app.state.voice_warmup_status == {
+        "status": "failed",
+        "stt": "failed",
+        "tts": "failed",
+    }
+    assert "Voice model warm-up failed; the first request will retry" in caplog.text
+
+
+@pytest.mark.asyncio
+async def test_startup_does_not_load_models_when_disabled_or_under_pytest(monkeypatch):
+    from openjarvis.server.app import _schedule_voice_warmup
+
+    stt_loader = MagicMock()
+    app = SimpleNamespace(
+        state=SimpleNamespace(
+            _voice_warmup_lock=threading.Lock(),
+            voice_warmup_status={
+                "status": "pending",
+                "stt": "pending",
+                "tts": "pending",
+            },
+            speech_backend=SimpleNamespace(_ensure_model=stt_loader),
+        )
+    )
+    monkeypatch.delenv("PYTEST_CURRENT_TEST", raising=False)
+    monkeypatch.setenv("MEGA_VOICE_WARMUP", "0")
+
+    await _schedule_voice_warmup(app)
+
+    assert app.state.voice_warmup_status["status"] == "disabled"
+    assert not hasattr(app.state, "voice_warmup_thread")
+    stt_loader.assert_not_called()
+
+    monkeypatch.setenv("MEGA_VOICE_WARMUP", "1")
+    monkeypatch.setenv("PYTEST_CURRENT_TEST", "test_startup_does_not_load_models")
+    await _schedule_voice_warmup(app)
+    assert not hasattr(app.state, "voice_warmup_thread")
+    stt_loader.assert_not_called()
+
+
+def test_tts_backend_resolution_is_shared_across_concurrent_requests():
+    from openjarvis.server.api_routes import _resolve_tts_backend_sync
+
+    backend = MagicMock()
+    app = SimpleNamespace(
+        state=SimpleNamespace(
+            config=SimpleNamespace(
+                speech=SimpleNamespace(
+                    tts_backend="kokoro",
+                    voice_id="pf_dora",
+                    voice_speed=1.0,
+                )
+            ),
+            _tts_resolution_lock=threading.Lock(),
+            tts_resolved=False,
+            tts_backend=None,
+        )
+    )
+
+    def discover(preferred):
+        time.sleep(0.03)
+        return backend
+
+    with patch(
+        "openjarvis.speech._tts_discovery.get_tts_backend",
+        side_effect=discover,
+    ) as discover_backend:
+        with ThreadPoolExecutor(max_workers=6) as executor:
+            resolved = list(
+                executor.map(lambda _: _resolve_tts_backend_sync(app), range(6))
+            )
+
+    assert all(item is backend for item in resolved)
+    discover_backend.assert_called_once_with("kokoro")
 
 
 # ---------------------------------------------------------------------------

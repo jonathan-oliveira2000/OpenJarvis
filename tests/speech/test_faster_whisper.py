@@ -1,5 +1,7 @@
 """Tests for Faster-Whisper speech backend."""
 
+from concurrent.futures import ThreadPoolExecutor
+from threading import Event, Lock
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -18,6 +20,36 @@ def _register_faster_whisper():
 def test_faster_whisper_backend_registers():
     """Backend registers itself in SpeechRegistry."""
     assert SpeechRegistry.contains("faster-whisper")
+
+
+def test_faster_whisper_model_load_is_shared_by_concurrent_callers():
+    constructor_started = Event()
+    allow_constructor_to_finish = Event()
+    constructor_lock = Lock()
+    constructed = []
+    model = MagicMock()
+
+    def create_model(*args, **kwargs):
+        with constructor_lock:
+            constructed.append((args, kwargs))
+        constructor_started.set()
+        assert allow_constructor_to_finish.wait(timeout=2)
+        return model
+
+    with patch(
+        "openjarvis.speech.faster_whisper.WhisperModel",
+        side_effect=create_model,
+    ):
+        backend = FasterWhisperBackend(model_size="base", device="cpu")
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            warmup = executor.submit(backend._ensure_model)
+            assert constructor_started.wait(timeout=2)
+            request = executor.submit(backend._ensure_model)
+            allow_constructor_to_finish.set()
+            assert warmup.result(timeout=2) is model
+            assert request.result(timeout=2) is model
+
+    assert len(constructed) == 1
 
 
 def test_faster_whisper_transcribe():

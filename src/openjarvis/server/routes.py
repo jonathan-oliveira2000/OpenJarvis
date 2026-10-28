@@ -1166,7 +1166,7 @@ async def pull_model(request: Request):
 
     import httpx as _httpx
 
-    host = getattr(engine, "_host", "http://localhost:11434")
+    host = getattr(engine, "_host", "http://127.0.0.1:11434")
     try:
         async with _httpx.AsyncClient(base_url=host, timeout=600.0) as client:
             resp = await client.post(
@@ -1195,7 +1195,7 @@ async def delete_model(model_name: str, request: Request):
 
     import httpx as _httpx
 
-    host = getattr(engine, "_host", "http://localhost:11434")
+    host = getattr(engine, "_host", "http://127.0.0.1:11434")
     try:
         async with _httpx.AsyncClient(base_url=host, timeout=30.0) as client:
             resp = await client.request(

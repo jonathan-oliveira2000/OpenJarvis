@@ -156,6 +156,8 @@ Não instale todos os extras indiscriminadamente: alguns trazem dependências pe
 
 O exemplo `configs/openjarvis/examples/chat-simple.toml` usa Ollama e `qwen3.5:4b`. Baixe esse modelo:
 
+O host local padrão do Ollama é `http://127.0.0.1:11434`, para evitar o atraso de resolução de `localhost` observado no Windows. Se já existir um `config.toml` no seu diretório `OPENJARVIS_HOME`, atualize `[engine.ollama].host` com `uv run jarvis config set engine.ollama.host http://127.0.0.1:11434`; esta configuração existente não é alterada automaticamente.
+
 ```powershell
 ollama pull qwen3.5:4b
 ```
@@ -220,6 +222,7 @@ Set-Location ..
 | `MEGA_SESSION_TTL_SECONDS` | Duração máxima da sessão. | `604800` segundos (7 dias). |
 | `MEGA_AUTH_MAX_FAILURES` | Tentativas de login falhas antes do bloqueio temporário. | `5`. |
 | `MEGA_AUTH_RATE_WINDOW_SECONDS` | Janela e período do bloqueio de tentativas. | `900` segundos. |
+| `MEGA_VOICE_WARMUP` | Carrega STT local e, se Kokoro for o TTS selecionado, faz uma síntese descartada em segundo plano ao iniciar o servidor. | Ligado; `0`, `false`, `no` ou `off` desliga. |
 | `OPENJARVIS_HOME` | Muda a pasta de configuração, banco e outros dados locais. | `%USERPROFILE%\.openjarvis` por padrão no Windows; exemplo: `D:\MegaData`. |
 | `OPENJARVIS_CONFIG` | Usa um arquivo TOML de configuração específico. | Não definido; por padrão usa `config.toml` sob a pasta de configuração. |
 | `OPENJARVIS_CORS_ORIGINS` | Lista separada por vírgulas das origens exatas permitidas para acesso web. | Por padrão, origens locais `localhost`/`127.0.0.1` nas portas 5173/5174 e origens Tauri. Exemplo: `https://mega.exemplo.com`. |

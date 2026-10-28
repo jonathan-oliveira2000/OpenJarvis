@@ -19,12 +19,14 @@ from openjarvis.server.analytics_routes import (
 from openjarvis.server.analytics_routes import (
     router as analytics_router,
 )
+from openjarvis.server.api_routes import include_all_routes
 from openjarvis.server.auth_routes import (
     initialize_auth_store,
+)
+from openjarvis.server.auth_routes import (
     router as auth_router,
 )
 from openjarvis.server.auth_store import AuthStore
-from openjarvis.server.api_routes import include_all_routes
 from openjarvis.server.comparison import comparison_router
 from openjarvis.server.connectors_router import create_connectors_router
 from openjarvis.server.dashboard import dashboard_router
@@ -36,6 +38,116 @@ from openjarvis.server.upload_router import router as upload_router
 logger = logging.getLogger(__name__)
 _MANAGED_SHUTDOWN_GRACE_SECONDS = 0.25
 _MANAGED_SHUTDOWN_DRAIN_SECONDS = 10.0
+_VOICE_WARMUP_ENV = "MEGA_VOICE_WARMUP"
+
+
+def _voice_warmup_enabled(value: str | None = None) -> bool:
+    value = os.environ.get(_VOICE_WARMUP_ENV, "1") if value is None else value
+    return value.strip().casefold() not in {"0", "false", "no", "off"}
+
+
+def _warm_voice_models(app: FastAPI) -> None:
+    """Warm local voice models in a background thread; never synthesize remotely."""
+    status = app.state.voice_warmup_status
+
+    def update(component: str, value: str) -> None:
+        with app.state._voice_warmup_lock:
+            status[component] = value
+
+    with app.state._voice_warmup_lock:
+        status.update(status="loading", stt="pending", tts="pending")
+
+    backend = getattr(app.state, "speech_backend", None)
+    ensure_model = getattr(backend, "_ensure_model", None)
+    if callable(ensure_model):
+        update("stt", "loading")
+        try:
+            ensure_model()
+            update("stt", "ready")
+        except Exception:
+            logger.warning(
+                "STT model warm-up failed; the first transcription will retry",
+                exc_info=True,
+            )
+            update("stt", "failed")
+    else:
+        update("stt", "skipped")
+
+    try:
+        from openjarvis.speech._tts_discovery import voice_preferences
+
+        config = getattr(app.state, "config", None)
+        if config is None:
+            from openjarvis.core.config import load_config
+
+            config = load_config()
+        preferred, voice_id, speed = voice_preferences(config)
+        if preferred != "kokoro":
+            update("tts", "skipped")
+        else:
+            from openjarvis.server.api_routes import _resolve_tts_backend_sync
+
+            tts_backend = _resolve_tts_backend_sync(app)
+            if getattr(tts_backend, "backend_id", "") != "kokoro":
+                update("tts", "skipped")
+            else:
+                update("tts", "loading")
+                tts_backend.synthesize(
+                    "Olá.",
+                    voice_id=voice_id,
+                    speed=speed,
+                    output_format="wav",
+                )
+                update("tts", "ready")
+    except Exception:
+        logger.warning(
+            "Local TTS model warm-up failed; the first synthesis will retry",
+            exc_info=True,
+        )
+        update("tts", "failed")
+
+    with app.state._voice_warmup_lock:
+        values = (status["stt"], status["tts"])
+        status["status"] = (
+            "failed"
+            if "failed" in values
+            else "ready"
+            if "ready" in values
+            else "skipped"
+        )
+
+
+def _voice_warmup_worker(app: FastAPI) -> None:
+    try:
+        _warm_voice_models(app)
+    except Exception:
+        logger.warning(
+            "Voice model warm-up failed; the first request will retry",
+            exc_info=True,
+        )
+        with app.state._voice_warmup_lock:
+            app.state.voice_warmup_status.update(
+                status="failed",
+                stt="failed",
+                tts="failed",
+            )
+
+
+async def _schedule_voice_warmup(app: FastAPI) -> None:
+    if not _voice_warmup_enabled() or os.environ.get("PYTEST_CURRENT_TEST") is not None:
+        with app.state._voice_warmup_lock:
+            app.state.voice_warmup_status.update(
+                status="disabled", stt="disabled", tts="disabled"
+            )
+        return
+    warmup_thread = threading.Thread(
+        target=_voice_warmup_worker,
+        args=(app,),
+        name="voice-model-warmup",
+        daemon=True,
+    )
+    app.state.voice_warmup_thread = warmup_thread
+    warmup_thread.start()
 
 
 def _restore_sendblue_bindings(app: FastAPI) -> None:
@@ -303,6 +415,15 @@ def create_app(
     app.state._owns_memory_backend = bool(own_memory_backend)
     app.state.memory_service = memory_service
     app.state.speech_backend = speech_backend
+    app.state._tts_resolution_lock = threading.Lock()
+    app.state._tts_resolution_future = None
+    app.state.tts_resolution_task = None
+    app.state._voice_warmup_lock = threading.Lock()
+    app.state.voice_warmup_status = {
+        "status": "pending",
+        "stt": "pending",
+        "tts": "pending",
+    }
     app.state.agent_manager = agent_manager
     app.state.agent_scheduler = agent_scheduler
     # Security primitives for the managed-agent HTTP/SSE routes
@@ -327,6 +448,10 @@ def create_app(
     # Exposed so WebSocket handlers can authenticate the handshake (the HTTP
     # AuthMiddleware never sees WS upgrade requests). Empty = auth disabled.
     app.state.api_key = api_key
+
+    @app.on_event("startup")
+    async def _on_startup_voice_warmup() -> None:
+        await _schedule_voice_warmup(app)
 
     @app.on_event("shutdown")
     async def _shutdown_managed_runtime() -> None:

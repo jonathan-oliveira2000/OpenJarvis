@@ -46,7 +46,7 @@ default = "vllm"
 host = "http://localhost:8001"            # vLLM serving port
 
 [engine.ollama]
-host = "http://localhost:11434"
+host = "http://127.0.0.1:11434"
 
 [engine.sglang]
 host = "http://localhost:30000"

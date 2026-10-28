@@ -10,7 +10,7 @@ default = "ollama"
 # default = "vllm"     # Use vLLM for GPU servers
 
 [engine.ollama]
-host = "http://localhost:11434"
+host = "http://127.0.0.1:11434"
 
 # [engine.vllm]
 # host = "http://localhost:8001"

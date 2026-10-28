@@ -214,7 +214,7 @@ Add an `EnvironmentVariables` dictionary to the plist:
     <key>OPENJARVIS_ENGINE_DEFAULT</key>
     <string>ollama</string>
     <key>OPENJARVIS_OLLAMA_HOST</key>
-    <string>http://localhost:11434</string>
+    <string>http://127.0.0.1:11434</string>
 </dict>
 ```
 

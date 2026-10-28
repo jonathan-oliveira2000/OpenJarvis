@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import os
 import tempfile
+import threading
 from typing import List, Optional
 
 from openjarvis.core.registry import SpeechRegistry
@@ -45,6 +46,7 @@ class FasterWhisperBackend(SpeechBackend):
         self._compute_type = compute_type
         self._model: Optional[WhisperModel] = None
         self._last_error: Optional[str] = None
+        self._model_lock = threading.Lock()
 
     def _resolve_compute_type(self) -> str:
         """Pick a CTranslate2 compute type supported by the configured device."""
@@ -85,18 +87,20 @@ class FasterWhisperBackend(SpeechBackend):
     def _ensure_model(self) -> WhisperModel:
         """Lazy-load the Whisper model on first use."""
         if self._model is None:
-            if WhisperModel is None:
-                self._last_error = (
-                    "faster-whisper is not installed. "
-                    "Install with: uv sync --extra desktop"
-                )
-                raise ImportError(self._last_error)
-            compute_type = self._resolve_compute_type()
-            self._model = WhisperModel(
-                self._model_size,
-                device=self._device,
-                compute_type=compute_type,
-            )
+            with self._model_lock:
+                if self._model is None:
+                    if WhisperModel is None:
+                        self._last_error = (
+                            "faster-whisper is not installed. "
+                            "Install with: uv sync --extra desktop"
+                        )
+                        raise ImportError(self._last_error)
+                    compute_type = self._resolve_compute_type()
+                    self._model = WhisperModel(
+                        self._model_size,
+                        device=self._device,
+                        compute_type=compute_type,
+                    )
         self._last_error = None
         return self._model
 

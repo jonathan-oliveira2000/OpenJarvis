@@ -6,6 +6,8 @@ import asyncio
 import inspect
 import json
 import logging
+import threading
+from concurrent.futures import Future
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -1041,8 +1043,20 @@ async def transcribe_speech(request: Request):
 async def speech_health(request: Request):
     """Check if a speech backend is available."""
     backend = getattr(request.app.state, "speech_backend", None)
+    warmup_status = getattr(request.app.state, "voice_warmup_status", None)
     if backend is None:
-        return {"available": False, "reason": "No speech backend configured"}
+        result = {"available": False, "reason": "No speech backend configured"}
+        if warmup_status is not None:
+            result["warmup"] = dict(warmup_status)
+        return result
+
+    if warmup_status and warmup_status.get("stt") == "loading":
+        result = {
+            "available": True,
+            "backend": backend.backend_id,
+            "warmup": dict(warmup_status),
+        }
+        return result
     try:
         available = backend.health()
         reason = None
@@ -1056,11 +1070,14 @@ async def speech_health(request: Request):
         if callable(last_error):
             reason = last_error()
 
-    return {
+    result = {
         "available": available,
         "backend": backend.backend_id,
         **({"reason": reason} if reason else {}),
     }
+    if warmup_status is not None:
+        result["warmup"] = dict(warmup_status)
+    return result
 
 
 # Synthesis is CPU-bound and runs in a worker thread; cap the input so one
@@ -1068,50 +1085,75 @@ async def speech_health(request: Request):
 _MAX_TTS_CHARS = 5000
 
 
-async def _resolve_tts_backend(request: Request):
-    """Return a healthy TTS backend, resolved once and cached on app state.
-
-    Backends load models on construction, so this stays lazy: a server whose
-    users never ask for audio never pays for it.
-    """
-    app = request.app
+def _resolve_tts_backend_sync(app):
+    """Resolve and cache the TTS backend under a lock shared with warm-up."""
     if getattr(app.state, "tts_resolved", False):
         return getattr(app.state, "tts_backend", None)
 
-    # The first health probe can load Kokoro's model. A shared task keeps that
-    # work off the event loop and coalesces concurrent probes, including when
-    # the backend is unavailable. A later request may retry that failure.
-    task = getattr(app.state, "tts_resolution_task", None)
-    if task is None:
+    lock = getattr(app.state, "_tts_resolution_lock", None)
+    if lock is None:
+        lock = threading.Lock()
+        app.state._tts_resolution_lock = lock
 
-        def discover():
-            from openjarvis.speech._tts_discovery import (
-                get_tts_backend,
-                voice_preferences,
-            )
+    with lock:
+        if getattr(app.state, "tts_resolved", False):
+            return getattr(app.state, "tts_backend", None)
+        task = getattr(app.state, "_tts_resolution_future", None)
+        resolver = task is None
+        if resolver:
+            task = Future()
+            app.state._tts_resolution_future = task
 
-            config = getattr(app.state, "config", None)
-            if config is None:
-                from openjarvis.core.config import load_config
-
-                config = load_config()
-
-            preferred, _, _ = voice_preferences(config)
-            return get_tts_backend(preferred)
-
-        task = asyncio.create_task(asyncio.to_thread(discover))
-        app.state.tts_resolution_task = task
+    if not resolver:
+        return task.result()
 
     try:
-        backend = await asyncio.shield(task)
+        from openjarvis.speech._tts_discovery import (
+            get_tts_backend,
+            voice_preferences,
+        )
+
+        config = getattr(app.state, "config", None)
+        if config is None:
+            from openjarvis.core.config import load_config
+
+            config = load_config()
+
+        preferred, _, _ = voice_preferences(config)
+        backend = get_tts_backend(preferred)
+    except BaseException as exc:
+        with lock:
+            if getattr(app.state, "_tts_resolution_future", None) is task:
+                task.set_exception(exc)
+                app.state._tts_resolution_future = None
+        raise
+
+    with lock:
+        if backend is not None:
+            app.state.tts_backend = backend
+            app.state.tts_resolved = True
+        if getattr(app.state, "_tts_resolution_future", None) is task:
+            task.set_result(backend)
+            app.state._tts_resolution_future = None
+    return backend
+
+
+async def _resolve_tts_backend(request: Request):
+    """Return a healthy TTS backend without blocking the event loop."""
+    if getattr(request.app.state, "tts_resolved", False):
+        return getattr(request.app.state, "tts_backend", None)
+    app = request.app
+    task = getattr(app.state, "tts_resolution_task", None)
+    if task is None:
+        task = asyncio.create_task(
+            asyncio.to_thread(_resolve_tts_backend_sync, app)
+        )
+        app.state.tts_resolution_task = task
+    try:
+        return await asyncio.shield(task)
     finally:
         if task.done() and getattr(app.state, "tts_resolution_task", None) is task:
             app.state.tts_resolution_task = None
-
-    if backend is not None:
-        app.state.tts_backend = backend
-        app.state.tts_resolved = True
-    return backend
 
 
 def _tts_voice_and_speed(request: Request, backend) -> tuple[str, float]:

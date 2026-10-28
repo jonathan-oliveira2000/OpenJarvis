@@ -2189,7 +2189,7 @@ def generate_minimal_toml(
     else:
         engine_host_section = (
             f"\n[engine.{engine}]\n"
-            f'# host = "http://localhost:11434"  '
+            f'# host = "http://127.0.0.1:11434"  '
             f"# set to remote URL if engine runs elsewhere\n"
         )
     return f"""\
@@ -2236,7 +2236,7 @@ def generate_default_toml(
 default = "{engine}"
 
 [engine.ollama]
-host = "http://localhost:11434"
+host = "http://127.0.0.1:11434"
 
 [engine.vllm]
 host = "http://localhost:8000"
