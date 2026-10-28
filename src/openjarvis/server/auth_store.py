@@ -19,14 +19,20 @@ from openjarvis.core.paths import get_config_dir
 SESSION_COOKIE_NAME = "openjarvis_session"
 MIN_USERNAME_LENGTH = 3
 MIN_PASSWORD_LENGTH = 8
+
+
+def _get_compatible_auth_env(name: str, default: str) -> str:
+    return os.environ.get(f"MEGA_{name}", os.environ.get(f"JARVIS_{name}", default))
+
+
 SESSION_TTL_SECONDS = max(
-    60, int(os.environ.get("JARVIS_SESSION_TTL_SECONDS", "604800"))
+    60, int(_get_compatible_auth_env("SESSION_TTL_SECONDS", "604800"))
 )
 RATE_LIMIT_MAX_FAILURES = max(
-    1, int(os.environ.get("JARVIS_AUTH_MAX_FAILURES", "5"))
+    1, int(_get_compatible_auth_env("AUTH_MAX_FAILURES", "5"))
 )
 RATE_LIMIT_WINDOW_SECONDS = max(
-    1, int(os.environ.get("JARVIS_AUTH_RATE_WINDOW_SECONDS", "900"))
+    1, int(_get_compatible_auth_env("AUTH_RATE_WINDOW_SECONDS", "900"))
 )
 _SCRYPT_N = 1 << 14
 _SCRYPT_R = 8

@@ -65,6 +65,9 @@ def test_writes_seed_files_if_absent(tmp_openjarvis_home: Path) -> None:
     assert (tmp_openjarvis_home / "MEMORY.md").exists()
     assert (tmp_openjarvis_home / "USER.md").exists()
     assert (tmp_openjarvis_home / "skills").is_dir()
+    soul = (tmp_openjarvis_home / "SOUL.md").read_text()
+    assert "M.E.G.A." in soul
+    assert "Máquina Extremamente Genial (Aparentemente)" in soul
 
 
 def test_does_not_overwrite_existing_seeds(tmp_openjarvis_home: Path) -> None:

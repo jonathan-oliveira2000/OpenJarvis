@@ -13,8 +13,8 @@ function frame(amplitude: number): Float32Array {
   return new Float32Array(20).fill(amplitude);
 }
 
-describe('JARVIS audio frame routing', () => {
-  it('does not drop audio in the processing guard while JARVIS is speaking', () => {
+describe('M.E.G.A. audio frame routing', () => {
+  it('does not drop audio in the processing guard while M.E.G.A. is speaking', () => {
     expect(shouldBlockAudioFrame('speaking', true)).toBe(false);
     expect(shouldBlockAudioFrame('hearing', true)).toBe(false);
     expect(shouldBlockAudioFrame('thinking', true)).toBe(true);
@@ -145,5 +145,7 @@ describe('JARVIS audio frame routing', () => {
   it('enables interruption for older saved preferences without the new option', () => {
     expect(mergeVoicePreferences({ sensitivity: 0.5 }).allowVoiceInterruption).toBe(true);
     expect(mergeVoicePreferences({ allowVoiceInterruption: false }).allowVoiceInterruption).toBe(false);
+    expect(mergeVoicePreferences({ wakeWord: true }).allowLegacyWakeWordAlias).toBe(false);
+    expect(mergeVoicePreferences({ allowLegacyWakeWordAlias: true }).allowLegacyWakeWordAlias).toBe(true);
   });
 });

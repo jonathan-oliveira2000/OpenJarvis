@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { Routes, Route } from 'react-router';
+import { Routes, Route, Navigate } from 'react-router';
 import { Layout } from './components/Layout';
 import { ChatPage } from './pages/ChatPage';
 import { DashboardPage } from './pages/DashboardPage';
@@ -191,7 +191,8 @@ export default function App() {
           <Route path="data-sources" element={<DataSourcesPage />} />
           <Route path="agents" element={<AgentsPage />} />
           <Route path="logs" element={<LogsPage />} />
-          <Route path="jarvis" element={<JarvisPage />} />
+          <Route path="mega" element={<JarvisPage />} />
+          <Route path="jarvis" element={<Navigate to="/mega" replace />} />
         </Route>
       </Routes>
       {commandPaletteOpen && <CommandPalette />}

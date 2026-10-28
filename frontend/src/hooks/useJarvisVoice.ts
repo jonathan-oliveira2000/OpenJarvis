@@ -42,6 +42,7 @@ export interface JarvisVoicePreferences {
   sensitivity: number;
   captions: boolean;
   wakeWord: boolean;
+  allowLegacyWakeWordAlias: boolean;
   autoStart: boolean;
   pauseWhenHidden: boolean;
   thinkingTimeoutSec: number;
@@ -61,6 +62,7 @@ const DEFAULT_PREFERENCES: JarvisVoicePreferences = {
   sensitivity: 0.5,
   captions: false,
   wakeWord: false,
+  allowLegacyWakeWordAlias: false,
   autoStart: false,
   pauseWhenHidden: true,
   thinkingTimeoutSec: 120,
@@ -78,6 +80,7 @@ export function mergeVoicePreferences(
     adapter: saved.adapter === 'server' ? 'server' : 'browser',
     allowVoiceInterruption: saved.allowVoiceInterruption !== false,
     interruptionRequiresWakeWord: saved.interruptionRequiresWakeWord === true,
+    allowLegacyWakeWordAlias: saved.allowLegacyWakeWordAlias === true,
     speed: Math.min(2, Math.max(0.5, Number(saved.speed) || 1)),
     sensitivity: Number.isFinite(Number(saved.sensitivity))
       ? Math.min(1, Math.max(0, Number(saved.sensitivity)))
@@ -391,7 +394,7 @@ export function useJarvisVoice(): JarvisVoiceController {
     const store = useAppStore.getState();
     let conversationId = conversationRef.current;
     if (!conversationId || !store.conversations.some((conversation) => conversation.id === conversationId)) {
-      conversationId = store.createConversation(model, 'J.A.R.V.I.S (voz)');
+      conversationId = store.createConversation(model, 'M.E.G.A. (voz)');
     }
     conversationRef.current = conversationId;
     const userMessage: ChatMessage = {
@@ -523,14 +526,16 @@ export function useJarvisVoice(): JarvisVoiceController {
     ) {
       let commandText = text;
       let wakeWordSatisfied = !preferencesRef.current.wakeWord;
-      if (preferencesRef.current.wakeWord) {
-        const activatedText = removeActivationWord(commandText);
-        if (activatedText !== null) {
-          commandText = activatedText;
-          wakeWordSatisfied = true;
-        }
+      const activatedText = removeActivationWord(commandText, {
+        allowLegacyAlias: preferencesRef.current.allowLegacyWakeWordAlias,
+      });
+      if (activatedText !== null) {
+        commandText = activatedText;
+        wakeWordSatisfied = true;
       }
-      if (wakeWordSatisfied && classifyInterruption(commandText).type === 'resume') {
+      if (wakeWordSatisfied && classifyInterruption(commandText, '', {
+        allowLegacyAlias: preferencesRef.current.allowLegacyWakeWordAlias,
+      }).type === 'resume') {
         await resumeParkedResponse();
         return;
       }
@@ -538,18 +543,24 @@ export function useJarvisVoice(): JarvisVoiceController {
 
     if (wasInterrupted) {
       if (preferencesRef.current.interruptionRequiresWakeWord) {
-        const activatedText = removeActivationWord(text);
+        const activatedText = removeActivationWord(text, {
+          allowLegacyAlias: preferencesRef.current.allowLegacyWakeWordAlias,
+        });
         if (activatedText === null) {
           scheduleAutomaticResume();
           return;
         }
         text = activatedText;
       } else {
-        const activationText = removeActivationWord(text);
+        const activationText = removeActivationWord(text, {
+          allowLegacyAlias: preferencesRef.current.allowLegacyWakeWordAlias,
+        });
         if (activationText !== null) text = activationText;
       }
 
-      const intent = classifyInterruption(text, interruptedSpeechTextRef.current);
+      const intent = classifyInterruption(text, interruptedSpeechTextRef.current, {
+        allowLegacyAlias: preferencesRef.current.allowLegacyWakeWordAlias,
+      });
       if (intent.type === 'noise' || intent.type === 'echo') {
         scheduleAutomaticResume();
         return;
@@ -579,7 +590,9 @@ export function useJarvisVoice(): JarvisVoiceController {
     }
 
     if (fromSpeech && preferencesRef.current.wakeWord) {
-      const activatedText = removeActivationWord(text);
+      const activatedText = removeActivationWord(text, {
+        allowLegacyAlias: preferencesRef.current.allowLegacyWakeWordAlias,
+      });
       if (activatedText === null) {
         processingRef.current = false;
         if (wasInterrupted) {

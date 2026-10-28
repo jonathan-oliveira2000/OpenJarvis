@@ -504,7 +504,7 @@ impl Default for SetupStatus {
     fn default() -> Self {
         Self {
             phase: "awaiting_source".into(),
-            detail: "Choose where OpenJarvis should run models.".into(),
+            detail: "Choose where M.E.G.A. should run models.".into(),
             ollama_ready: false,
             server_ready: false,
             model_ready: false,
@@ -1312,7 +1312,7 @@ async fn boot_backend(backend: SharedBackend, status: SharedStatus) {
 
         {
             let mut s = status.lock().await;
-            s.detail = "Downloading OpenJarvis (first launch)...".into();
+            s.detail = "Preparing M.E.G.A. (first launch)...".into();
         }
 
         let mut clone_cmd = tokio::process::Command::new(&git_bin);
@@ -1426,7 +1426,7 @@ async fn boot_backend(backend: SharedBackend, status: SharedStatus) {
                         Ok(true) => {
                             let mut s = status.lock().await;
                             s.error = Some(format!(
-                                "An API server is already running on port {}, but OpenJarvis cannot securely apply your new inference API key to a server it did not start. Stop that server, then try setup again.",
+                                "An API server is already running on port {}, but M.E.G.A. cannot securely apply your new inference API key to a server it did not start. Stop that server, then try setup again.",
                                 JARVIS_PORT,
                             ));
                             return;
@@ -1689,7 +1689,7 @@ async fn boot_backend(backend: SharedBackend, status: SharedStatus) {
                 )
             } else {
                 format!(
-                    "Jarvis server exited (code {}) before becoming ready.\n\nStderr:\n{}",
+                    "M.E.G.A. backend exited (code {}) before becoming ready.\n\nStderr:\n{}",
                     code_str, stderr,
                 )
             });
@@ -1700,7 +1700,7 @@ async fn boot_backend(backend: SharedBackend, status: SharedStatus) {
             let mut s = status.lock().await;
             s.error = Some(if stderr.is_empty() {
                 format!(
-                    "Jarvis server did not become ready within 10 minutes. Check that:\n\
+                    "M.E.G.A. backend did not become ready within 10 minutes. Check that:\n\
                      1. uv is installed ({})\n\
                      2. The OpenJarvis repo is at {}\n\
                      3. Run 'uv sync' in that directory",
@@ -1709,7 +1709,7 @@ async fn boot_backend(backend: SharedBackend, status: SharedStatus) {
                 )
             } else {
                 format!(
-                    "Jarvis server did not become ready within 10 minutes.\n\nStderr:\n{}",
+                    "M.E.G.A. backend did not become ready within 10 minutes.\n\nStderr:\n{}",
                     stderr,
                 )
             });
@@ -1765,7 +1765,7 @@ async fn start_backend(
 ) -> Result<(), String> {
     if read_configured_inference_config().is_none() {
         *status.lock().await = SetupStatus::default();
-        return Err("Choose an inference source before starting OpenJarvis.".into());
+        return Err("Choose an inference source before starting M.E.G.A.".into());
     }
     let b = backend.inner().clone();
     let s = status.inner().clone();
@@ -3379,7 +3379,7 @@ pub fn run() {
             let health = MenuItemBuilder::with_id("health", "Health: starting...")
                 .enabled(false)
                 .build(app)?;
-            let quit = MenuItemBuilder::with_id("quit", "Quit OpenJarvis").build(app)?;
+            let quit = MenuItemBuilder::with_id("quit", "Quit M.E.G.A.").build(app)?;
 
             let menu = MenuBuilder::new(app)
                 .item(&show)
@@ -3391,7 +3391,7 @@ pub fn run() {
 
             let _tray = TrayIconBuilder::with_id("main")
                 .icon(app.default_window_icon().unwrap().clone())
-                .tooltip("OpenJarvis")
+                .tooltip("M.E.G.A.")
                 .menu(&menu)
                 .on_menu_event(move |app, event| match event.id().as_ref() {
                     "show" => {
@@ -3477,7 +3477,7 @@ pub fn run() {
             get_overlay_conversation,
         ])
         .build(tauri::generate_context!())
-        .expect("error while building OpenJarvis Desktop")
+        .expect("error while building M.E.G.A. Desktop")
         .run(move |_app, event| {
             if let tauri::RunEvent::ExitRequested { .. } = event {
                 let b = backend.clone();

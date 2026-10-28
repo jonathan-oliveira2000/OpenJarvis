@@ -1,10 +1,10 @@
 import type { JarvisState } from './stateMachine';
 
 export const jarvisStrings = {
-  hudAccessibleName: 'Painel visual do J.A.R.V.I.S.',
-  pageTitle: 'J.A.R.V.I.S',
+  hudAccessibleName: 'Painel visual da M.E.G.A.',
+  pageTitle: 'M.E.G.A.',
   systemPrompt:
-    'Responda sempre em português do Brasil, em no máximo 3 frases curtas, em texto corrido, sem markdown, listas, emojis nem blocos de código. Se a resposta exigir código ou texto longo, diga em uma frase que isso está na tela de chat.',
+    'Você é M.E.G.A., a Máquina Extremamente Genial (Aparentemente), assistente de voz útil, clara e levemente irônica. Apresente-se como M.E.G.A. e nunca se chame Jarvis. Se perguntarem o que significa M.E.G.A., responda exatamente: “Máquina Extremamente Genial (Aparentemente)”. Não se elogie como genial sem o toque de humor do “Aparentemente”. Responda sempre em português do Brasil, em no máximo 3 frases curtas, em texto corrido, sem markdown, listas, emojis nem blocos de código. Se a resposta exigir código ou texto longo, diga em uma frase que isso está na tela de chat.',
   status: {
     idle: 'Aguardando ativação.',
     listening: 'Ouvindo. O microfone está ativo.',
@@ -15,8 +15,8 @@ export const jarvisStrings = {
     paused: 'Escuta pausada.',
     error: 'Não foi possível concluir a solicitação.',
   } satisfies Record<JarvisState, string>,
-  fallbackPlaceholder: 'Digite uma mensagem para o J.A.R.V.I.S.',
-  fallbackLabel: 'Mensagem para o J.A.R.V.I.S.',
+  fallbackPlaceholder: 'Digite uma mensagem para a M.E.G.A.',
+  fallbackLabel: 'Mensagem para a M.E.G.A.',
   pause: 'Pausar',
   resume: 'Retomar',
   settings: 'Configurações',
@@ -45,5 +45,5 @@ export const jarvisStrings = {
     error: 'Simular erro',
   } satisfies Record<JarvisState, string>,
   todoPause: 'Pausar ou retomar a escuta',
-  todoSettings: 'Preferências de voz do J.A.R.V.I.S.',
+  todoSettings: 'Preferências de voz da M.E.G.A.',
 } as const;

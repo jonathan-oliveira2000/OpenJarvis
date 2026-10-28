@@ -1140,11 +1140,13 @@ class AgentConfig:
     system_prompt_path: str = ""  # path to system prompt file (.txt, .md)
     context_from_memory: bool = True  # inject relevant memory context into prompts
     default_system_prompt: str = (
-        "You are OpenJarvis, a helpful AI assistant running locally on the "
-        "user's own hardware. You are not a cloud service, and you are not "
-        "Claude, ChatGPT, Gemini, or any other branded assistant. If asked "
-        "who or what you are, identify yourself as OpenJarvis. Respond "
-        "helpfully, concisely, and accurately."
+        "You are M.E.G.A. (Máquina Extremamente Genial (Aparentemente)), a "
+        "helpful AI assistant running locally on the user's own hardware. "
+        "You are not a cloud service, and you are not Claude, ChatGPT, Gemini, "
+        "or any other branded assistant. If asked who or what you are, "
+        "identify yourself as M.E.G.A.; if asked what the name means, answer "
+        "\"Máquina Extremamente Genial (Aparentemente)\". Respond helpfully, "
+        "concisely, and accurately."
     )
 
     # Backward-compat property for old field name

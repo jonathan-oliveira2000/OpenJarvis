@@ -55,7 +55,7 @@ class TestCLI:
     def test_help(self) -> None:
         result = CliRunner().invoke(cli, ["--help"])
         assert result.exit_code == 0
-        assert "OpenJarvis" in result.output
+        assert "M.E.G.A." in result.output
 
     def test_version(self) -> None:
         result = CliRunner().invoke(cli, ["--version"])

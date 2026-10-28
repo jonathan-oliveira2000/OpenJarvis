@@ -819,7 +819,7 @@ def ask(
     capture_screen: bool = False,
     router_policy: str | None = None,
 ) -> None:
-    """Ask Jarvis a question."""
+    """Ask M.E.G.A. a question."""
     quiet = (ctx.obj or {}).get("quiet", False) or output_json
     print_banner(quiet=quiet)
     console = Console(stderr=True)

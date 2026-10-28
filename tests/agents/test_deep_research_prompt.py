@@ -78,9 +78,11 @@ def test_system_prompt_has_no_think_directive() -> None:
     assert prompt.startswith("/no_think")
 
 
-def test_system_prompt_mentions_jarvis() -> None:
-    """The agent identifies as Jarvis."""
+def test_system_prompt_mentions_mega() -> None:
+    """The agent identifies as M.E.G.A. and defines the acronym."""
     from openjarvis.agents.deep_research import _build_system_prompt
 
     prompt = _build_system_prompt()
-    assert "Jarvis" in prompt
+    assert "M.E.G.A." in prompt
+    assert "Máquina Extremamente Genial (Aparentemente)" in prompt
+    assert "You are Jarvis" not in prompt

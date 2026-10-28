@@ -25,9 +25,10 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       manifest: {
-        name: 'OpenJarvis',
-        short_name: 'Jarvis',
-        description: 'On-device AI assistant',
+        name: 'M.E.G.A.',
+        short_name: 'MEGA',
+        description: 'Máquina Extremamente Genial (Aparentemente)',
+        lang: 'pt-BR',
         theme_color: '#161618',
         background_color: '#161618',
         display: 'standalone',

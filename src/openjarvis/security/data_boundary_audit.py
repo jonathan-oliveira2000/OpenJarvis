@@ -428,10 +428,10 @@ def build_data_boundary_report(
         builder.add(
             finding_id="config-root-error",
             status="fail",
-            title="OpenJarvis home directory could not be resolved",
+            title="M.E.G.A. home directory could not be resolved",
             potential_data_path="runtime state root -> local store checks",
             evidence=(
-                f"{error_type} while resolving OpenJarvis home; "
+                f"{error_type} while resolving M.E.G.A. home; "
                 "path details were redacted"
             ),
             recommendation=(
@@ -444,7 +444,7 @@ def build_data_boundary_report(
         builder.add(
             finding_id="config-load-error",
             status="fail",
-            title="OpenJarvis config could not be loaded",
+            title="M.E.G.A. config could not be loaded",
             potential_data_path="config.toml -> data-boundary report",
             evidence=_truncate(config_error),
             recommendation=(
@@ -468,7 +468,7 @@ def build_data_boundary_report(
         builder.add(
             finding_id="config-file-missing",
             status="info",
-            title="OpenJarvis config file was not found",
+            title="M.E.G.A. config file was not found",
             potential_data_path="configuration defaults -> data-boundary report",
             evidence="config_loaded = false",
             recommendation=(
@@ -1362,7 +1362,7 @@ def _audit_server_exposure(config: Any, builder: _FindingBuilder) -> None:
                 if binds_all
                 else "Server is configured to bind a non-loopback interface"
             ),
-            potential_data_path="OpenJarvis HTTP server -> local network interfaces",
+            potential_data_path="M.E.G.A. HTTP server -> local network interfaces",
             evidence=f"server.host = {_quote(host)}",
             recommendation=(
                 "Use server.host = '127.0.0.1' unless LAN exposure is intentional."
@@ -1376,7 +1376,7 @@ def _audit_server_exposure(config: Any, builder: _FindingBuilder) -> None:
             finding_id="a2a-enabled-without-auth-token",
             status="fail",
             title="A2A server is enabled without an auth token",
-            potential_data_path="inbound A2A requests -> OpenJarvis agent runtime",
+            potential_data_path="inbound A2A requests -> M.E.G.A. agent runtime",
             evidence="a2a.enabled = true; a2a.auth_token is empty",
             recommendation=(
                 "Set a2a.auth_token or disable A2A unless the network is trusted."
@@ -1419,7 +1419,7 @@ def _audit_channel_settings(config: Any, builder: _FindingBuilder) -> None:
             finding_id=f"channel-secret-{normalized}",
             status=status,
             title=f"Channel secret configured: {label}",
-            potential_data_path=f"OpenJarvis channel messages -> {service}",
+            potential_data_path=f"M.E.G.A. channel messages -> {service}",
             evidence=f"{dotted_path} is non-empty; value was not printed",
             recommendation=(
                 "Use dedicated bot/service credentials and rotate them after tests. "
@@ -1434,7 +1434,7 @@ def _audit_channel_settings(config: Any, builder: _FindingBuilder) -> None:
             finding_id=f"channel-reference-{normalized}",
             status=status,
             title=f"Channel endpoint or identifier configured: {label}",
-            potential_data_path=f"OpenJarvis channel messages -> {service}",
+            potential_data_path=f"M.E.G.A. channel messages -> {service}",
             evidence=f"{dotted_path} is non-empty; value was not printed",
             recommendation=(
                 "Review configured channel endpoints and identifiers before "

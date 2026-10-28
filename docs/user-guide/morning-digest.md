@@ -166,7 +166,7 @@ The `sections` list controls what the digest covers, in order of priority:
 
 ### Persona
 
-The `persona` field loads a prompt file from `configs/openjarvis/prompts/personas/{name}.md`. The default `jarvis` persona delivers briefings with dry British wit, prioritizes urgent items, and interprets health data as trends rather than raw numbers.
+The `persona` field loads a prompt file from `configs/openjarvis/prompts/personas/{name}.md`. The legacy `jarvis` persona ID now presents as M.E.G.A., uses subtle humor, prioritizes urgent items, and interprets health data as trends rather than raw numbers.
 
 To create a custom persona, add a new `.md` file in the personas directory.
 

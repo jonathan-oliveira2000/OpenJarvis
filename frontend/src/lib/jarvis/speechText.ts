@@ -1,9 +1,11 @@
 const CODE_BLOCK = /```[\s\S]*?(?:```|$)|~~~[\s\S]*?(?:~~~|$)/g;
 const EMOJI_OR_SYMBOL = /[\p{Extended_Pictographic}\p{S}]/gu;
+const MEGA_NAME = /\bM\s*\.?\s*E\s*\.?\s*G\s*\.?\s*A\s*\.?(?![\p{L}\p{N}])/giu;
 
 export function toSpeechText(text: string): string {
   return text
     .replace(CODE_BLOCK, 'O código está na tela de chat.')
+    .replace(MEGA_NAME, 'Mega')
     .replace(/!\[([^\]]*)\]\([^)]+\)/g, '$1')
     .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
     .replace(/\[([^\]]+)\]\[[^\]]*\]/g, '$1')
@@ -48,7 +50,10 @@ export function takeCompleteSentences(text: string): { sentences: string[]; rema
   return { sentences: complete, remainder };
 }
 
-export function removeActivationWord(text: string): string | null {
+export function removeActivationWord(
+  text: string,
+  options: { allowLegacyAlias?: boolean } = {},
+): string | null {
   let normalized = '';
   const originalOffsets: number[] = [];
   let originalOffset = 0;
@@ -58,8 +63,12 @@ export function removeActivationWord(text: string): string | null {
     normalized += plain;
     for (let index = 0; index < plain.length; index += 1) originalOffsets.push(originalOffset);
   }
-  const match = normalized.match(/^\s*(?:ei\s+)?jarvis\b[\s,:;.!?—-]*/u);
+  const activationPattern = options.allowLegacyAlias
+    ? /^\s*(?:(?:ei|oi|e\s+ai|ok)\s+)?(?:mega|megah|jarvis)\b[\s,:;.!?—-]*/u
+    : /^\s*(?:(?:ei|oi|e\s+ai|ok)\s+)?(?:mega|megah)\b[\s,:;.!?—-]*/u;
+  const match = normalized.match(activationPattern);
   if (!match) return null;
+  if (/^(?:sena|promocao|byte|bytes)\b/u.test(normalized.slice(match[0].length).trimStart())) return null;
   const originalEnd = originalOffsets[match[0].length - 1] ?? 0;
   return text.slice(originalEnd).trim();
 }

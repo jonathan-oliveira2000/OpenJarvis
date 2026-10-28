@@ -19,6 +19,7 @@ from openjarvis.server.auth_routes import initialize_auth_store, router
 from openjarvis.server.auth_store import (
     SESSION_COOKIE_NAME,
     AuthStore,
+    _get_compatible_auth_env,
     hash_password,
     verify_password,
 )
@@ -144,6 +145,8 @@ def test_login_is_generic_rate_limited_and_password_is_hashed(tmp_path):
 
 def test_first_registration_and_seed_admin_role(tmp_path, monkeypatch):
     store = AuthStore(tmp_path / "seed.db")
+    monkeypatch.delenv("MEGA_ADMIN_NAME", raising=False)
+    monkeypatch.delenv("MEGA_ADMIN_PASSWORD", raising=False)
     monkeypatch.setenv("JARVIS_ADMIN_NAME", "Root")
     monkeypatch.setenv("JARVIS_ADMIN_PASSWORD", "long-enough-password")
     initialize_auth_store(store)
@@ -153,6 +156,40 @@ def test_first_registration_and_seed_admin_role(tmp_path, monkeypatch):
     second = _register(client, "Second")
     assert first.json()["user"]["role"] == "admin"
     assert second.json()["user"]["role"] == "user"
+
+
+def test_mega_admin_seed_overrides_legacy_environment(tmp_path, monkeypatch):
+    store = AuthStore(tmp_path / "mega-seed.db")
+    monkeypatch.setenv("MEGA_ADMIN_NAME", "MegaRoot")
+    monkeypatch.setenv("MEGA_ADMIN_PASSWORD", "mega-password-123")
+    monkeypatch.setenv("JARVIS_ADMIN_NAME", "LegacyRoot")
+    monkeypatch.setenv("JARVIS_ADMIN_PASSWORD", "legacy-password-123")
+
+    initialize_auth_store(store)
+
+    assert store.find_user("megaroot")[0]["role"] == "admin"
+    assert store.find_user("legacyroot") is None
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        "ADMIN_NAME",
+        "ADMIN_PASSWORD",
+        "SESSION_TTL_SECONDS",
+        "AUTH_MAX_FAILURES",
+        "AUTH_RATE_WINDOW_SECONDS",
+    ],
+)
+def test_mega_auth_environment_overrides_legacy_and_legacy_remains_fallback(
+    name, monkeypatch
+):
+    monkeypatch.delenv(f"MEGA_{name}", raising=False)
+    monkeypatch.setenv(f"JARVIS_{name}", "legacy-value")
+    assert _get_compatible_auth_env(name, "default") == "legacy-value"
+
+    monkeypatch.setenv(f"MEGA_{name}", "mega-value")
+    assert _get_compatible_auth_env(name, "default") == "mega-value"
 
 
 def test_default_deny_expired_session_and_origin_check(tmp_path):

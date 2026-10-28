@@ -169,7 +169,7 @@ def test_scan_data_boundaries_strict_passes_with_info_only(
     result = CliRunner().invoke(scan, ["--data-boundaries", "--strict"])
 
     assert result.exit_code == 0
-    assert "OpenJarvis Data-Boundary Scan" in result.output
+    assert "M.E.G.A. Data-Boundary Scan" in result.output
 
 
 def test_scan_data_boundaries_init_defaults_strict_exits_on_warn(
@@ -325,7 +325,7 @@ def test_existing_scan_quick_text_still_works(monkeypatch):
     result = CliRunner().invoke(scan, ["--quick"])
 
     assert result.exit_code == 0
-    assert "OpenJarvis Security Scan" in result.output
+    assert "M.E.G.A. Security Scan" in result.output
 
 
 def test_data_boundary_loader_honors_openjarvis_config(

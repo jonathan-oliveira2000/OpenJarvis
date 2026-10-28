@@ -18,6 +18,7 @@ from openjarvis.server.auth_store import (
     SESSION_COOKIE_NAME,
     SESSION_TTL_SECONDS,
     AuthStore,
+    _get_compatible_auth_env,
     verify_password,
 )
 
@@ -228,17 +229,17 @@ def import_legacy_conversations(payload: LegacyImportRequest, request: Request):
 
 
 def initialize_auth_store(store: AuthStore) -> None:
-    admin_name = os.environ.get("JARVIS_ADMIN_NAME", "").strip()
-    admin_password = os.environ.get("JARVIS_ADMIN_PASSWORD", "")
+    admin_name = _get_compatible_auth_env("ADMIN_NAME", "").strip()
+    admin_password = _get_compatible_auth_env("ADMIN_PASSWORD", "")
     if bool(admin_name) != bool(admin_password):
         raise RuntimeError(
-            "JARVIS_ADMIN_NAME and JARVIS_ADMIN_PASSWORD must be configured together."
+            "MEGA_ADMIN_NAME and MEGA_ADMIN_PASSWORD must be configured together."
         )
     if admin_name:
         if len(admin_name) < MIN_USERNAME_LENGTH:
-            raise RuntimeError("JARVIS_ADMIN_NAME must contain at least 3 characters.")
+            raise RuntimeError("MEGA_ADMIN_NAME must contain at least 3 characters.")
         if len(admin_password) < MIN_PASSWORD_LENGTH:
             raise RuntimeError(
-                "JARVIS_ADMIN_PASSWORD must contain at least 8 characters."
+                "MEGA_ADMIN_PASSWORD must contain at least 8 characters."
             )
         store.seed_admin(admin_name, admin_password)

@@ -231,7 +231,7 @@ describe('classifyInterruption', () => {
     'pode seguir',
     'desculpa, continua',
     'sinto muito, prossiga com o tempo',
-    'Jarvis, que horas são, quer dizer, esquece isso, prossiga com o tempo',
+    'Mega, que horas são, quer dizer, esquece isso, prossiga com o tempo',
     'como você estava dizendo',
     'voltando ao que você falava',
   ])('recognizes resume command: %s', (text) => {
@@ -253,6 +253,12 @@ describe('classifyInterruption', () => {
 
   it('does not mistake an ordinary question about continuing for a resume command', () => {
     expect(classifyInterruption('Como faço para continuar uma série no Netflix?').type).toBe('question');
+  });
+
+  it('recognizes M.E.G.A. interruption commands and only accepts the prior name when enabled', () => {
+    expect(classifyInterruption('Mega pare').type).toBe('stop');
+    expect(classifyInterruption('Jarvis pare').type).toBe('question');
+    expect(classifyInterruption('Jarvis pare', '', { allowLegacyAlias: true }).type).toBe('stop');
   });
 });
 

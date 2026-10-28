@@ -283,7 +283,7 @@ export function AuthGate({ children }: AuthGateProps) {
             {mode === 'login' ? <LogIn size={22} /> : <UserPlus size={22} />}
           </div>
           <h1 id="auth-title" className="text-2xl font-semibold">
-            {mode === 'login' ? 'Entrar no OpenJarvis' : 'Criar uma conta'}
+            {mode === 'login' ? 'Entrar na M.E.G.A.' : 'Criar uma conta'}
           </h1>
           <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
             {mode === 'login'

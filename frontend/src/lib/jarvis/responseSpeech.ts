@@ -1,4 +1,4 @@
-import { toSpeechText } from './speechText';
+import { removeActivationWord, toSpeechText } from './speechText';
 import type { SpeechQueue } from './ttsAdapters';
 
 export function getFinalResponseSpeech(response: string, pendingSpeech: string): string {
@@ -10,11 +10,11 @@ export type InterruptionIntent =
   | { type: 'repeat'; count: number };
 
 const RESUME_COMMAND =
-  /^(?:(?:jarvis)\s+)?(?:(?:desculpa|sinto muito)[, ]+)?(?:pode\s+)?(?:continuar|continue|continua|prossiga|prosseguir|segue|seguir|retome|retoma|terminar)(?:\s+(?:com|de onde parou|o que voce estava dizendo|ao que voce falava).*)?$|^(?:como voce estava dizendo|voltando ao que voce falava)$/u;
+  /^(?:(?:desculpa|sinto muito)[, ]+)?(?:pode\s+)?(?:continuar|continue|continua|prossiga|prosseguir|segue|seguir|retome|retoma|terminar)(?:\s+(?:com|de onde parou|o que voce estava dizendo|ao que voce falava).*)?$|^(?:como voce estava dizendo|voltando ao que voce falava)$/u;
 const RETRACTION_RESUME =
   /\b(?:quer dizer|deixa pra la|esquece isso|na verdade nao)\b.*\b(?:continuar|continue|continua|prossiga|prosseguir|retome|retoma|segue|seguir)\b/u;
 const STOP_COMMAND =
-  /^(?:(?:jarvis)\s+)?(?:(?:por favor)\s+)?(?:para|pare|chega|silencio|fica quieto|fique quieto)(?:\s+por favor)?$/u;
+  /^(?:(?:por favor)\s+)?(?:para|pare|chega|silencio|fica quieto|fique quieto)(?:\s+por favor)?$/u;
 const FILLER = /^(?:h+m+|a+|e+|eh+|ahn+|hum+|uh+|tosse|ruido)$/u;
 
 function normalizeIntentText(text: string): string {
@@ -38,8 +38,10 @@ function tokenOverlap(left: string, right: string): number {
 export function classifyInterruption(
   text: string,
   currentlySpokenText = '',
+  options: { allowLegacyAlias?: boolean } = {},
 ): InterruptionIntent {
-  const normalized = normalizeIntentText(text);
+  const activationText = removeActivationWord(text, options);
+  const normalized = normalizeIntentText(activationText ?? text);
   if (!normalized || normalized.length < 2 || FILLER.test(normalized)) return { type: 'noise' };
 
   const spoken = normalizeIntentText(currentlySpokenText);
@@ -49,7 +51,7 @@ export function classifyInterruption(
 
   if (STOP_COMMAND.test(normalized)) return { type: 'stop' };
 
-  const repetitionCount = getRepetitionCount(text);
+  const repetitionCount = getRepetitionCount(activationText ?? text);
   if (repetitionCount !== null) return { type: 'repeat', count: repetitionCount };
 
   if (

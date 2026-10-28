@@ -492,7 +492,7 @@ def _render_results(results: List[ScanResult]) -> None:
 
     console = Console()
     console.print()
-    console.print("[bold]OpenJarvis Security Scan[/bold]")
+    console.print("[bold]M.E.G.A. Security Scan[/bold]")
     console.print()
 
     table = Table(show_header=True, header_style="bold", show_lines=True)
@@ -523,7 +523,7 @@ def _render_results(results: List[ScanResult]) -> None:
     if fail_count:
         console.print(
             "[red bold]Action required:[/red bold] address critical findings "
-            "before storing sensitive data with OpenJarvis."
+            "before storing sensitive data with M.E.G.A."
         )
         console.print()
     elif warn_count:
@@ -545,7 +545,7 @@ def _render_data_boundary_report(
 
     console = Console()
     console.print()
-    console.print("[bold]OpenJarvis Data-Boundary Scan[/bold]")
+    console.print("[bold]M.E.G.A. Data-Boundary Scan[/bold]")
     console.print(f"Verdict: [bold]{report.verdict}[/bold]")
     console.print()
 

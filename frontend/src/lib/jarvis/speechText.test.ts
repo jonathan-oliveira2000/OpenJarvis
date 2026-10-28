@@ -1,10 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { removeActivationWord, splitSentences, takeCompleteSentences, toSpeechText } from './speechText';
 
-describe('Jarvis speech text helpers', () => {
+describe('M.E.G.A. speech text helpers', () => {
   it('removes markdown, URLs, emoji, symbols, and never reads code blocks', () => {
     expect(toSpeechText('**Olá!** [documentação](https://example.com) [referência][docs] 😊 `x+y`\n[docs]: https://example.com\n```ts\nconst x = 1;\n```'))
       .toBe('Olá! documentação referência x y O código está na tela de chat.');
+  });
+
+  it('speaks the written name as Mega instead of spelling its letters', () => {
+    expect(toSpeechText('M.E.G.A. responde. MEGA está ouvindo.'))
+      .toBe('Mega responde. Mega está ouvindo.');
   });
 
   it('splits complete sentences while keeping an unfinished stream remainder', () => {
@@ -23,10 +28,27 @@ describe('Jarvis speech text helpers', () => {
     expect(toSpeechText('```ts\nconst x = 1;')).toBe('O código está na tela de chat.');
   });
 
-  it('detects accented and prefixed activation words and strips the prefix', () => {
-    expect(removeActivationWord('Járvis, abra a tela.')).toBe('abra a tela.');
-    expect(removeActivationWord('Ei Jarvis, como vai?')).toBe('como vai?');
+  it('detects Mega activation variants and strips the prefix', () => {
+    expect(removeActivationWord('Mega, abra a tela.')).toBe('abra a tela.');
+    expect(removeActivationWord('MÉGA fale.')).toBe('fale.');
+    expect(removeActivationWord('Ei Mega, como vai?')).toBe('como vai?');
+    expect(removeActivationWord('Oi Mega, como vai?')).toBe('como vai?');
+    expect(removeActivationWord('E aí Mega, como vai?')).toBe('como vai?');
+    expect(removeActivationWord('Ok Mega, como vai?')).toBe('como vai?');
+    expect(removeActivationWord('Megah, abra a tela.')).toBe('abra a tela.');
+    expect(removeActivationWord('Mega')).toBe('');
     expect(removeActivationWord('Abra a tela.')).toBeNull();
-    expect(removeActivationWord('J\u0061\u0301rvis: fale.')).toBe('fale.');
+  });
+
+  it('does not treat common words and phrases as activation calls', () => {
+    expect(removeActivationWord('Mega sena')).toBeNull();
+    expect(removeActivationWord('Mega promoção')).toBeNull();
+    expect(removeActivationWord('Megabyte')).toBeNull();
+    expect(removeActivationWord('A promoção é mega')).toBeNull();
+  });
+
+  it('accepts the previous activation name only when explicitly enabled', () => {
+    expect(removeActivationWord('Jarvis, fale.')).toBeNull();
+    expect(removeActivationWord('Ei Járvis, fale.', { allowLegacyAlias: true })).toBe('fale.');
   });
 });

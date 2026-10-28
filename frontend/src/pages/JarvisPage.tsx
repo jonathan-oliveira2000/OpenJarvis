@@ -221,7 +221,11 @@ export function JarvisPage() {
             </label>
             <label className="flex items-center gap-2 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
               <input type="checkbox" checked={preferences.wakeWord} onChange={(event) => update({ wakeWord: event.currentTarget.checked })} />
-              Exigir palavra “Jarvis”
+              Exigir palavra “Mega”
+            </label>
+            <label className="flex items-center gap-2 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+              <input type="checkbox" checked={preferences.allowLegacyWakeWordAlias} onChange={(event) => update({ allowLegacyWakeWordAlias: event.currentTarget.checked })} />
+              Permitir o nome anterior como palavra de ativação
             </label>
             <label className="flex items-center gap-2 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
               <input type="checkbox" checked={preferences.autoStart} onChange={(event) => update({ autoStart: event.currentTarget.checked })} />
@@ -233,11 +237,11 @@ export function JarvisPage() {
             </label>
             <label className="flex items-center gap-2 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
               <input type="checkbox" checked={preferences.allowVoiceInterruption} onChange={(event) => update({ allowVoiceInterruption: event.currentTarget.checked })} />
-              Permitir interromper o JARVIS falando
+              Permitir interromper a M.E.G.A. falando
             </label>
             <label className="flex items-center gap-2 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
               <input type="checkbox" checked={preferences.interruptionRequiresWakeWord} onChange={(event) => update({ interruptionRequiresWakeWord: event.currentTarget.checked })} />
-              Exigir “Jarvis” para interromper
+              Exigir “Mega” para interromper
             </label>
             <p className="text-[11px] sm:col-span-2" style={{ color: 'var(--color-text-tertiary)' }}>
               Fones de ouvido reduzem o eco e oferecem a melhor detecção de interrupções.

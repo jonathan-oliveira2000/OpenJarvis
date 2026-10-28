@@ -44,6 +44,9 @@ class TestInitConfig:
         assert result.exception is None, result.output
         assert result.exit_code == 0
         assert config_path.read_text(encoding="utf-8") == supplied_content
+        soul = (config_dir / "SOUL.md").read_text(encoding="utf-8")
+        assert "M.E.G.A." in soul
+        assert "Máquina Extremamente Genial (Aparentemente)" in soul
         # Treat the supplied file as input: init must not rewrite it.
         assert provided.read_text(encoding="utf-8") == supplied_content
 

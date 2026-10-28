@@ -375,7 +375,7 @@ def _check_frontend_port(port: int) -> None:
     held_by = f" It is held by PID {owner}." if owner else ""
     raise click.ClickException(
         f"Frontend port {port} is unavailable and was not started by "
-        f"OpenJarvis.{held_by} Stop it, or choose another port with "
+        f"M.E.G.A.{held_by} Stop it, or choose another port with "
         f"--frontend-port."
     )
 
@@ -467,14 +467,14 @@ def gui(frontend_port: int, api_port: int, no_server: bool, no_browser: bool) ->
     """Start the browser-based graphical mode in the default browser.
 
     This command is intended for source checkouts. For an installed desktop
-    application, launch OpenJarvis from the operating system menu instead.
+    application, launch M.E.G.A. from the operating system menu instead.
     """
     console = Console(stderr=True)
     frontend = _frontend_dir()
     if frontend is None:
         raise click.ClickException(
             "The graphical frontend is not available in this installation. "
-            "Download the OpenJarvis desktop app or run this command "
+            "Download the M.E.G.A. desktop app or run this command "
             "from a source checkout."
         )
     npm = shutil.which("npm") or shutil.which("npm.cmd")
@@ -493,7 +493,7 @@ def gui(frontend_port: int, api_port: int, no_server: bool, no_browser: bool) ->
             raise click.ClickException(
                 f"API port {api_port} is already serving an unregistered service. "
                 "Stop it or choose another port. Use --no-server only when you "
-                "intend to use an externally managed OpenJarvis backend."
+                "intend to use an externally managed M.E.G.A. backend."
             )
         console.print(
             f"[green]Reusing the API server already running on port {api_port}.[/green]"
@@ -523,7 +523,7 @@ def gui(frontend_port: int, api_port: int, no_server: bool, no_browser: bool) ->
             check=False,
         )
         if server.returncode != 0:
-            raise click.ClickException("Could not start the OpenJarvis API server.")
+            raise click.ClickException("Could not start the M.E.G.A. API server.")
 
     env = os.environ.copy()
     # Let browser requests use Vite's same-origin proxy at any frontend port.
@@ -571,7 +571,7 @@ def gui(frontend_port: int, api_port: int, no_server: bool, no_browser: bool) ->
             )
         owner.refresh()
         url = f"http://127.0.0.1:{frontend_port}"
-        console.print(f"[green]OpenJarvis graphical mode is ready:[/green] {url}")
+        console.print(f"[green]M.E.G.A. graphical mode is ready:[/green] {url}")
         if not no_browser:
             webbrowser.open(url)
 

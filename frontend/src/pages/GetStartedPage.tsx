@@ -199,7 +199,7 @@ function HostedView() {
         <Sparkles size={32} />
       </div>
       <h1 className="text-3xl font-bold mb-2" style={{ color: 'var(--color-text)' }}>
-        OpenJarvis
+        M.E.G.A.
       </h1>
       <p
         className="text-sm mb-6 leading-relaxed max-w-md mx-auto"
@@ -263,7 +263,7 @@ function DesktopView() {
           <Sparkles size={32} />
         </div>
         <h1 className="text-3xl font-bold mb-2" style={{ color: 'var(--color-text)' }}>
-          OpenJarvis Desktop
+          M.E.G.A. Desktop
         </h1>
         <p
           className="text-sm mb-4 leading-relaxed max-w-md mx-auto"
@@ -336,7 +336,7 @@ function SelfHostedView() {
           <Sparkles size={32} />
         </div>
         <h1 className="text-3xl font-bold mb-2" style={{ color: 'var(--color-text)' }}>
-          OpenJarvis
+          M.E.G.A.
         </h1>
         <p
           className="text-sm mb-4 leading-relaxed max-w-md mx-auto"

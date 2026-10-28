@@ -530,7 +530,9 @@ sources = ["hackernews", "news_rss"]
     soul_path = DEFAULT_CONFIG_DIR / "SOUL.md"
     if not soul_path.exists():
         soul_path.write_text(
-            "# Agent Persona\n\nYou are Jarvis, a helpful personal AI assistant.\n",
+            "# Agent Persona\n\n"
+            "You are M.E.G.A. (Máquina Extremamente Genial (Aparentemente)), "
+            "a helpful personal AI assistant.\n",
             encoding="utf-8",
         )
 

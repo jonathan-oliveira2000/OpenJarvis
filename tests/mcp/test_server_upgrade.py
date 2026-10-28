@@ -31,7 +31,7 @@ class TestServerTitle:
         resp = server.handle(req)
         server_info = resp.result["serverInfo"]
         assert "title" in server_info
-        assert server_info["title"] == "OpenJarvis Tool Server"
+        assert server_info["title"] == "M.E.G.A. Tool Server"
 
 
 class TestListChanged:
