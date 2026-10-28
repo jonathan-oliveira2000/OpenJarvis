@@ -12,7 +12,12 @@ import {
   SPEAKING_VAD_START_MS,
 } from '../lib/jarvis/audioFrame';
 import { EnergyVad, frameRms, pcmToWav } from '../lib/jarvis/vad';
-import { removeActivationWord, takeCompleteSentences, toSpeechText } from '../lib/jarvis/speechText';
+import {
+  removeActivationWord,
+  takeCompleteSentences,
+  takeInitialClause,
+  toSpeechText,
+} from '../lib/jarvis/speechText';
 import {
   isUsableTranscription,
   TRANSCRIPTION_TIMEOUT_MS,
@@ -440,6 +445,7 @@ export function useJarvisVoice(): JarvisVoiceController {
     const maxTokens = Math.min(current.settings.maxTokens, 512);
     let response = '';
     let pendingSpeech = '';
+    let firstSpeechChunkQueued = false;
     const responseId = createId();
     let utteranceIndex = 0;
     let queuedSpeech = false;
@@ -475,7 +481,17 @@ export function useJarvisVoice(): JarvisVoiceController {
         responseSpeakerRef.current?.updateResponseText(responseId, response);
         const complete = takeCompleteSentences(pendingSpeech);
         pendingSpeech = complete.remainder;
-        for (const sentence of complete.sentences) speakResponse(sentence);
+        if (complete.sentences.length > 0) {
+          for (const sentence of complete.sentences) speakResponse(sentence);
+          firstSpeechChunkQueued = true;
+        } else if (!firstSpeechChunkQueued) {
+          const initialClause = takeInitialClause(pendingSpeech);
+          if (initialClause.clause) {
+            speakResponse(initialClause.clause);
+            pendingSpeech = initialClause.remainder;
+            firstSpeechChunkQueued = true;
+          }
+        }
         useAppStore.getState().updateMessageContent(conversationId, assistant.id, response);
       }
 
@@ -1077,6 +1093,7 @@ export function useJarvisVoice(): JarvisVoiceController {
     return () => {
       unsubscribe();
       responseSpeaker.cancel();
+      queue.dispose();
       if (adapterRef.current === adapter) adapterRef.current = null;
       if (responseSpeakerRef.current === responseSpeaker) responseSpeakerRef.current = null;
       if (queueRef.current === queue) queueRef.current = null;

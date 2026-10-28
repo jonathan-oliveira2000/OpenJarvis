@@ -150,7 +150,7 @@ def write_initial_config(
         f"\n"
         f"[engine.{engine}]\n"
         f"# host = "
-        f'"http://localhost:11434"  '
+        f'"http://127.0.0.1:11434"  '
         f"# set to remote URL if engine runs elsewhere\n"
         f"\n"
         f"[intelligence]\n"

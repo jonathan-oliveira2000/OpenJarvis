@@ -126,7 +126,7 @@ Add multiple `Environment` directives or use `EnvironmentFile` for complex confi
 [Service]
 Environment=HOME=/opt/openjarvis
 Environment=OPENJARVIS_ENGINE_DEFAULT=vllm
-Environment=OPENJARVIS_OLLAMA_HOST=http://localhost:11434
+Environment=OPENJARVIS_OLLAMA_HOST=http://127.0.0.1:11434
 ```
 
 Or load from a file:

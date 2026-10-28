@@ -97,7 +97,7 @@ Controls which inference engine is used and how each engine is reached. Engine s
 default = "ollama"
 
 [engine.ollama]
-host = "http://localhost:11434"
+host = "http://127.0.0.1:11434"
 
 [engine.vllm]
 host = "http://localhost:8000"
@@ -120,7 +120,7 @@ host = "http://localhost:30000"
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `host` | string | `http://localhost:11434` | Base URL for the Ollama API server. |
+| `host` | string | `http://127.0.0.1:11434` | Base URL for the Ollama API server. |
 
 **`[engine.vllm]`:**
 
@@ -803,7 +803,7 @@ default = "vllm"
 host = "http://localhost:8000"
 
 [engine.ollama]
-host = "http://localhost:11434"
+host = "http://127.0.0.1:11434"
 
 [intelligence]
 default_model = "Qwen/Qwen2.5-72B-Instruct"
@@ -896,7 +896,7 @@ enabled = true
 default = "ollama"
 
 [engine.ollama]
-host = "http://localhost:11434"
+host = "http://127.0.0.1:11434"
 
 [intelligence]
 default_model = "qwen3:8b"
@@ -953,7 +953,7 @@ If you have an existing `~/.openjarvis/config.toml` from a previous version, her
     ```toml
     [engine]
     default = "ollama"
-    ollama_host = "http://localhost:11434"
+    ollama_host = "http://127.0.0.1:11434"
     vllm_host = "http://localhost:8000"
     llamacpp_path = "/usr/local/bin/llama-server"
     ```
@@ -965,7 +965,7 @@ If you have an existing `~/.openjarvis/config.toml` from a previous version, her
     default = "ollama"
 
     [engine.ollama]
-    host = "http://localhost:11434"
+    host = "http://127.0.0.1:11434"
 
     [engine.vllm]
     host = "http://localhost:8000"
@@ -1153,6 +1153,8 @@ OpenJarvis respects the following environment variables:
 | `FIRECRAWL_API_KEY` | API key for the Firecrawl web search engine. Optional. When set and no other search key is, `auto` engine selection prefers Firecrawl over the keyless tier, and URL queries return the page or PDF as markdown. Keys: [firecrawl.dev](https://www.firecrawl.dev/app/api-keys?utm_source=openjarvis&utm_medium=integration). |
 | `FIRECRAWL_API_URL` | Base URL of the Firecrawl API, for example a [self-hosted Firecrawl](https://docs.firecrawl.dev/contributing/self-host). Optional. Defaults to `https://api.firecrawl.dev`. Any other URL enables the Firecrawl engine without a key, for instances that run without auth. |
 | `OPENJARVIS_WEB_SEARCH_ENGINE` | Web search engine for the `web_search` tool: `auto` (default), `youcom`, `tavily`, `serply`, `firecrawl`, or `duckduckgo`. |
+| `OLLAMA_HOST` | Base URL for the local or remote Ollama API. Defaults to `http://127.0.0.1:11434`. |
+| `MEGA_VOICE_WARMUP` | Loads local STT and warms Kokoro TTS in the background at server startup. Enabled by default; set to `0`, `false`, `no`, or `off` to disable. |
 
 In the desktop app, you can save `ATLASCLOUD_API_KEY` in **Cloud Models** or
 **Settings → API Keys** instead of setting an environment variable.

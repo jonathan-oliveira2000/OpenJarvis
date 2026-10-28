@@ -68,7 +68,7 @@ class OllamaEmbedder(Embedder):
     model:
         Ollama model tag; defaults to ``nomic-embed-text`` (768-dim).
     base_url:
-        Ollama server base URL.  Defaults to ``http://localhost:11434``.
+        Ollama server base URL.  Defaults to ``http://127.0.0.1:11434``.
     batch_size:
         Items per HTTP request.  Tuned for Ollama — larger batches help
         throughput but increase memory on the server.
@@ -82,7 +82,7 @@ class OllamaEmbedder(Embedder):
     def __init__(
         self,
         model: str = "nomic-embed-text",
-        base_url: str = "http://localhost:11434",
+        base_url: str = "http://127.0.0.1:11434",
         *,
         batch_size: int = 16,
         max_parallel: int = 8,

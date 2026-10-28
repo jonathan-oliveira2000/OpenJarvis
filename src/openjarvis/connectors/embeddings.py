@@ -28,7 +28,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-DEFAULT_OLLAMA_HOST = "http://localhost:11434"
+DEFAULT_OLLAMA_HOST = "http://127.0.0.1:11434"
 DEFAULT_EMBED_MODEL = "nomic-embed-text"
 
 
@@ -42,7 +42,7 @@ class OllamaEmbedder:
     host:
         Base URL for the Ollama HTTP API. When ``None`` (default) the
         ``OLLAMA_HOST`` environment variable is used, then
-        ``http://localhost:11434`` -- the same precedence as ``OllamaEngine``.
+        ``http://127.0.0.1:11434`` -- the same precedence as ``OllamaEngine``.
     timeout:
         Per-request timeout in seconds.
     """

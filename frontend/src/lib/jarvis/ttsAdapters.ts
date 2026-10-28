@@ -7,13 +7,21 @@ export type TtsEvent =
   | { type: 'end' }
   | { type: 'amplitude'; value: number };
 
+export interface TtsSpeakOptions {
+  voiceId?: string;
+  speed: number;
+  utteranceId?: string;
+}
+
 export interface TtsAdapter {
-  speak(text: string, options: { voiceId?: string; speed: number }): Promise<void>;
+  speak(text: string, options: TtsSpeakOptions): Promise<void>;
+  prefetch?(text: string, options: TtsSpeakOptions): void;
   cancel(): void;
   subscribe(listener: (event: TtsEvent) => void): () => void;
 }
 
 export type TtsAdapterKind = 'browser' | 'server';
+export const SERVER_TTS_PREFETCH_LIMIT = 1;
 
 export function getBrowserVoices(): SpeechSynthesisVoice[] {
   return typeof window !== 'undefined' && 'speechSynthesis' in window
@@ -104,11 +112,39 @@ function createServerAdapter(): TtsAdapter {
   let analyser: AnalyserNode | null = null;
   let objectUrl: string | null = null;
   let frame = 0;
-  let synthesisController: AbortController | null = null;
+  const pendingSynthesis = new Map<
+    string,
+    { controller: AbortController; promise: Promise<Blob> }
+  >();
   let rejectCurrent: ((error: Error) => void) | null = null;
   const emit = (event: TtsEvent) => listeners.forEach((listener) => listener(event));
+  const synthesisKey = (text: string, options: TtsSpeakOptions) =>
+    `${options.utteranceId ?? text}\u0000${options.voiceId ?? ''}\u0000${options.speed}`;
+  const requestSynthesis = (text: string, options: TtsSpeakOptions) => {
+    const key = synthesisKey(text, options);
+    const existing = pendingSynthesis.get(key);
+    if (existing) return { key, entry: existing };
+
+    const controller = new AbortController();
+    const promise = synthesizeSpeech(toSpeechText(text), {
+      voiceId: options.voiceId || undefined,
+      speed: options.speed,
+      signal: controller.signal,
+    }).then((blob) => {
+      if (controller.signal.aborted) {
+        throw new DOMException('Síntese cancelada.', 'AbortError');
+      }
+      return blob;
+    });
+    const entry = { controller, promise };
+    pendingSynthesis.set(key, entry);
+    return { key, entry };
+  };
+  const discardSynthesis = (key: string, entry: { controller: AbortController; promise: Promise<Blob> }) => {
+    if (pendingSynthesis.get(key) === entry) pendingSynthesis.delete(key);
+  };
   const cleanup = () => {
-    cancelAnimationFrame(frame);
+    if (frame && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(frame);
     frame = 0;
     if (audio) {
       audio.onended = null;
@@ -135,23 +171,19 @@ function createServerAdapter(): TtsAdapter {
     speak: async (text, options) => {
       const content = toSpeechText(text);
       if (!content) return;
-      const controller = new AbortController();
-      synthesisController = controller;
+      const { key, entry } = requestSynthesis(content, options);
       let blob: Blob;
       try {
-        blob = await synthesizeSpeech(content, {
-          voiceId: options.voiceId || undefined,
-          speed: options.speed,
-          signal: controller.signal,
-        });
+        blob = await entry.promise;
       } catch (error) {
-        if (synthesisController === controller) synthesisController = null;
+        discardSynthesis(key, entry);
         throw error;
       }
-      if (controller.signal.aborted) return;
-      if (synthesisController === controller) synthesisController = null;
+      discardSynthesis(key, entry);
+      if (entry.controller.signal.aborted) return;
       objectUrl = URL.createObjectURL(blob);
-      audio = new Audio(objectUrl);
+      const playback = new Audio(objectUrl);
+      audio = playback;
       context = new AudioContext();
       void context.resume();
       analyser = context.createAnalyser();
@@ -161,7 +193,9 @@ function createServerAdapter(): TtsAdapter {
       analyser.connect(context.destination);
 
       await new Promise<void>((resolve, reject) => {
-        if (!audio || !analyser) return reject(new Error('Não foi possível preparar o áudio.'));
+        if (audio !== playback || !analyser) {
+          return reject(new Error('Não foi possível preparar o áudio.'));
+        }
         rejectCurrent = reject;
         const data = new Uint8Array(analyser.frequencyBinCount);
         const measure = () => {
@@ -172,21 +206,22 @@ function createServerAdapter(): TtsAdapter {
           emit({ type: 'amplitude', value: Math.min(1, Math.sqrt(power / data.length) / 42) });
           frame = requestAnimationFrame(measure);
         };
-        audio.onended = () => {
+        playback.onended = () => {
           rejectCurrent = null;
           cleanup();
           emit({ type: 'amplitude', value: 0 });
           emit({ type: 'end' });
           resolve();
         };
-        audio.onerror = () => {
+        playback.onerror = () => {
           rejectCurrent = null;
           cleanup();
           emit({ type: 'amplitude', value: 0 });
           emit({ type: 'end' });
           reject(new Error('Falha ao reproduzir a voz do servidor.'));
         };
-        void audio.play().then(() => {
+        void playback.play().then(() => {
+          if (audio !== playback) return;
           emit({ type: 'start' });
           measure();
         }).catch((error: unknown) => {
@@ -198,9 +233,17 @@ function createServerAdapter(): TtsAdapter {
         });
       });
     },
+    prefetch: (text, options) => {
+      const content = toSpeechText(text);
+      if (!content) return;
+      const { entry } = requestSynthesis(content, options);
+      void entry.promise.catch(() => undefined);
+    },
     cancel: () => {
-      synthesisController?.abort();
-      synthesisController = null;
+      for (const synthesis of pendingSynthesis.values()) {
+        synthesis.controller.abort();
+      }
+      pendingSynthesis.clear();
       const reject = rejectCurrent;
       rejectCurrent = null;
       cleanup();
@@ -216,26 +259,50 @@ export function createTtsAdapter(kind: TtsAdapterKind): TtsAdapter {
 }
 
 export class SpeechQueue {
-  private items: string[] = [];
+  private items: Array<{
+    id: string;
+    text: string;
+    options: Omit<TtsSpeakOptions, 'utteranceId'>;
+  }> = [];
   private running = false;
   private activeText: string | null = null;
+  private adapterSpeaking = false;
+  private utteranceSequence = 0;
+  private prefetchedIds = new Set<string>();
   private idleWaiters: Array<() => void> = [];
+  private readonly unsubscribeAdapter: () => void;
 
   constructor(
     private readonly adapter: TtsAdapter,
     private readonly options: () => { voiceId?: string; speed: number },
     private readonly onError: (error: Error) => void = () => undefined,
-  ) {}
+  ) {
+    this.unsubscribeAdapter = adapter.subscribe((event) => {
+      if (event.type === 'start') {
+        this.adapterSpeaking = true;
+        this.prefetchUpcoming();
+      } else if (event.type === 'end') {
+        this.adapterSpeaking = false;
+      }
+    });
+  }
 
   enqueue(text: string): void {
     const normalized = toSpeechText(text);
     if (!normalized) return;
-    this.items.push(normalized);
+    this.items.push({
+      id: `speech-queue-${this.utteranceSequence++}`,
+      text: normalized,
+      options: this.options(),
+    });
+    this.prefetchUpcoming();
     void this.drain();
   }
 
   clear(): void {
     this.items = [];
+    this.prefetchedIds.clear();
+    this.adapterSpeaking = false;
     this.adapter.cancel();
     this.finishIfIdle();
   }
@@ -247,12 +314,18 @@ export class SpeechQueue {
   park(): string[] {
     const pending = [
       ...(this.activeText ? [this.activeText] : []),
-      ...this.items,
+      ...this.items.map((item) => item.text),
     ];
     this.items = [];
+    this.prefetchedIds.clear();
+    this.adapterSpeaking = false;
     this.adapter.cancel();
     this.finishIfIdle();
     return pending;
+  }
+
+  dispose(): void {
+    this.unsubscribeAdapter();
   }
 
   whenIdle(): Promise<void> {
@@ -265,11 +338,15 @@ export class SpeechQueue {
     this.running = true;
     try {
       while (this.items.length > 0) {
-        const text = this.items.shift();
-        if (!text) continue;
-        this.activeText = text;
+        const item = this.items.shift();
+        if (!item) continue;
+        this.prefetchedIds.delete(item.id);
+        this.activeText = item.text;
         try {
-          await this.adapter.speak(text, this.options());
+          await this.adapter.speak(item.text, {
+            ...item.options,
+            utteranceId: item.id,
+          });
         } catch (caught) {
           if (caught instanceof DOMException && caught.name === 'AbortError') continue;
           this.onError(caught instanceof Error ? caught : new Error('Falha na síntese de voz.'));
@@ -281,6 +358,18 @@ export class SpeechQueue {
       this.running = false;
       this.finishIfIdle();
       if (this.items.length > 0) void this.drain();
+    }
+  }
+
+  private prefetchUpcoming(): void {
+    if (!this.adapterSpeaking || !this.adapter.prefetch) return;
+    for (const item of this.items.slice(0, SERVER_TTS_PREFETCH_LIMIT)) {
+      if (this.prefetchedIds.has(item.id)) continue;
+      this.prefetchedIds.add(item.id);
+      this.adapter.prefetch(item.text, {
+        ...item.options,
+        utteranceId: item.id,
+      });
     }
   }
 

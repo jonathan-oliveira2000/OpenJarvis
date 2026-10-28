@@ -2,6 +2,9 @@ const CODE_BLOCK = /```[\s\S]*?(?:```|$)|~~~[\s\S]*?(?:~~~|$)/g;
 const EMOJI_OR_SYMBOL = /[\p{Extended_Pictographic}\p{S}]/gu;
 const MEGA_NAME = /\bM\s*\.?\s*E\s*\.?\s*G\s*\.?\s*A\s*\.?(?![\p{L}\p{N}])/giu;
 
+export const INITIAL_CLAUSE_MIN_CHARS = 48;
+export const MIN_SPEECH_FRAGMENT_CHARS = 20;
+
 export function toSpeechText(text: string): string {
   return text
     .replace(CODE_BLOCK, 'O código está na tela de chat.')
@@ -20,7 +23,7 @@ export function toSpeechText(text: string): string {
     .replace(/[^\p{L}\p{N}\s.,!?;:'"()[\]{}%\-]/gu, ' ')
     .replace(/[ \t]+/g, ' ')
     .replace(/\s+([.,!?;:])/g, '$1')
-    .replace(/([.,!?;:])(?=\S)/g, '$1 ')
+    .replace(/([.,!?;:])(?=\S)(?!\d)/g, '$1 ')
     .replace(/\s+/g, ' ')
     .trim();
 }
@@ -46,8 +49,50 @@ export function takeCompleteSentences(text: string): { sentences: string[]; rema
   const normalized = toSpeechText(processable);
   const matches = normalized.match(/[^.!?]+[.!?]+(?:["')\]]*)/g) ?? [];
   const complete = matches.map((sentence) => sentence.trim()).filter(Boolean);
-  const remainder = `${normalized.slice(matches.join('').length).trim()}${withheld}`;
-  return { sentences: complete, remainder };
+  const sentences: string[] = [];
+  let shortFragment = '';
+  for (const sentence of complete) {
+    const combined = shortFragment ? `${shortFragment} ${sentence}` : sentence;
+    if (combined.length < MIN_SPEECH_FRAGMENT_CHARS) {
+      shortFragment = combined;
+      continue;
+    }
+    sentences.push(combined);
+    shortFragment = '';
+  }
+  const unprocessed = `${normalized.slice(matches.join('').length).trim()}${withheld}`;
+  const remainder = [
+    shortFragment,
+    unprocessed,
+  ].filter(Boolean).join(' ');
+  return { sentences, remainder };
+}
+
+export function takeInitialClause(
+  text: string,
+  minChars = INITIAL_CLAUSE_MIN_CHARS,
+): { clause: string | null; remainder: string } {
+  const normalized = toSpeechText(text);
+  for (let index = 0; index < normalized.length; index += 1) {
+    const punctuation = normalized[index];
+    if (punctuation !== ',' && punctuation !== ';' && punctuation !== ':') continue;
+
+    const previous = normalized[index - 1] ?? '';
+    const next = normalized[index + 1] ?? '';
+    if (/\d/u.test(previous) && /\d/u.test(next)) continue;
+
+    const clause = normalized.slice(0, index + 1).trim();
+    if (clause.length < minChars) continue;
+    if (/(?:\b(?:dr|dra|sr|sra|srta|prof|profa|p|ex|etc)\.)$/iu.test(clause.slice(0, -1).trim())) {
+      continue;
+    }
+
+    return {
+      clause,
+      remainder: normalized.slice(index + 1).trim(),
+    };
+  }
+  return { clause: null, remainder: normalized };
 }
 
 export function removeActivationWord(

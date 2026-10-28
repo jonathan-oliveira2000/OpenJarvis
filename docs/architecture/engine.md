@@ -127,7 +127,7 @@ All providers produce the same output format consumed by agents:
 
 The Ollama backend communicates via Ollama's native HTTP API at `/api/chat` and `/api/tags`. It is the recommended engine for consumer NVIDIA GPUs.
 
-- **Default host:** `http://localhost:11434`
+- **Default host:** `http://127.0.0.1:11434`
 - **Health check:** `GET /api/tags`
 - **Model listing:** `GET /api/tags` (extracts model names)
 - **Tool support:** Passes `tools` in the request payload and extracts `tool_calls` from responses
@@ -370,7 +370,7 @@ Engine hosts and defaults are configured in `~/.openjarvis/config.toml` using **
 default = "ollama"
 
 [engine.ollama]
-host = "http://localhost:11434"
+host = "http://127.0.0.1:11434"
 
 [engine.vllm]
 host = "http://localhost:8000"
@@ -391,7 +391,7 @@ The `EngineConfig` dataclass and its per-engine sub-dataclasses map these settin
 | Config Class | Field | Default | Description |
 |---|---|---|---|
 | `EngineConfig` | `default` | `"ollama"` (hardware-dependent) | Preferred engine backend |
-| `OllamaEngineConfig` | `host` | `http://localhost:11434` | Ollama server URL |
+| `OllamaEngineConfig` | `host` | `http://127.0.0.1:11434` | Ollama server URL |
 | `VLLMEngineConfig` | `host` | `http://localhost:8000` | vLLM server URL |
 | `SGLangEngineConfig` | `host` | `http://localhost:30000` | SGLang server URL |
 | `LlamaCppEngineConfig` | `host` | `http://localhost:8080` | llama.cpp server URL |

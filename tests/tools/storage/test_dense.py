@@ -41,7 +41,7 @@ def _ollama_base_url() -> str:
     """
     host = os.environ.get("OLLAMA_HOST", "")
     if not host:
-        return "http://localhost:11434"
+        return "http://127.0.0.1:11434"
     if host.startswith(("http://", "https://")):
         return host.rstrip("/")
     if ":" in host:
@@ -115,7 +115,7 @@ class TestOllamaProbe:
             monkeypatch.setenv("OLLAMA_HOST", raw)
             assert _ollama_base_url() == expected, raw
         monkeypatch.delenv("OLLAMA_HOST", raising=False)
-        assert _ollama_base_url() == "http://localhost:11434"
+        assert _ollama_base_url() == "http://127.0.0.1:11434"
 
     def test_probe_false_when_server_down(self, monkeypatch):
         def _refuse(url, timeout):
