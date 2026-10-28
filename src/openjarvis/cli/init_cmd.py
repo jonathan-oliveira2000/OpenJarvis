@@ -531,7 +531,7 @@ sources = ["hackernews", "news_rss"]
     if not soul_path.exists():
         soul_path.write_text(
             "# Agent Persona\n\n"
-            "You are M.E.G.A. (Máquina Extremamente Genial (Aparentemente)), "
+            "You are M.E.G.A (Máquina Extremamente Genial (Aparentemente)), "
             "a helpful personal AI assistant.\n",
             encoding="utf-8",
         )

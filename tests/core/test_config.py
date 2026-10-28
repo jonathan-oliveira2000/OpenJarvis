@@ -247,9 +247,9 @@ class TestAgentConfigNew:
         )
 
     def test_default_system_prompt_anchors_identity(self) -> None:
-        """#540: the prompt names M.E.G.A. and denies training identities."""
+        """#540: the prompt names M.E.G.A and denies training identities."""
         prompt = AgentConfig().default_system_prompt
-        assert "M.E.G.A." in prompt
+        assert "M.E.G.A" in prompt
         assert "Máquina Extremamente Genial (Aparentemente)" in prompt
         assert "not Claude" in prompt
 

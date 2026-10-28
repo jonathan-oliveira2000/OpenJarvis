@@ -13,8 +13,8 @@ function frame(amplitude: number): Float32Array {
   return new Float32Array(20).fill(amplitude);
 }
 
-describe('M.E.G.A. audio frame routing', () => {
-  it('does not drop audio in the processing guard while M.E.G.A. is speaking', () => {
+describe('M.E.G.A audio frame routing', () => {
+  it('does not drop audio in the processing guard while M.E.G.A is speaking', () => {
     expect(shouldBlockAudioFrame('speaking', true)).toBe(false);
     expect(shouldBlockAudioFrame('hearing', true)).toBe(false);
     expect(shouldBlockAudioFrame('thinking', true)).toBe(true);

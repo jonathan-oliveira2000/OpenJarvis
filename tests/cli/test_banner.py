@@ -5,7 +5,7 @@ def test_banner_uses_mega_identity_and_preserves_tagline(capsys):
     print_banner()
 
     output = capsys.readouterr().out
-    assert "M.E.G.A." in output
+    assert "M.E.G.A" in output
     assert "Personal AI, On Personal Devices" in output
     assert "OpenJarvis" not in output
 

@@ -1,14 +1,14 @@
-"""Startup banner — M.E.G.A. assistant identity + tagline."""
+"""Startup banner — M.E.G.A assistant identity + tagline."""
 
 from __future__ import annotations
 
-_WORDMARK = ("M.E.G.A.",)
+_WORDMARK = ("M.E.G.A",)
 
 _TAGLINE = "Personal AI, On Personal Devices"
 
 
 def print_banner(quiet: bool = False) -> None:
-    """Print the M.E.G.A. startup banner. No-op when quiet."""
+    """Print the M.E.G.A startup banner. No-op when quiet."""
     if quiet:
         return
     try:

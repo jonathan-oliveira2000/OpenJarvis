@@ -254,7 +254,7 @@ class MCPServer:
                 "serverInfo": {
                     "name": self.SERVER_NAME,
                     "version": self.SERVER_VERSION,
-                    "title": "M.E.G.A. Tool Server",
+                    "title": "M.E.G.A Tool Server",
                 },
             },
             id=req.id,

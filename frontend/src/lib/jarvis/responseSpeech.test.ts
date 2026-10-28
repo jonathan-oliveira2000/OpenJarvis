@@ -255,7 +255,7 @@ describe('classifyInterruption', () => {
     expect(classifyInterruption('Como faço para continuar uma série no Netflix?').type).toBe('question');
   });
 
-  it('recognizes M.E.G.A. interruption commands and only accepts the prior name when enabled', () => {
+  it('recognizes M.E.G.A interruption commands and only accepts the prior name when enabled', () => {
     expect(classifyInterruption('Mega pare').type).toBe('stop');
     expect(classifyInterruption('Jarvis pare').type).toBe('question');
     expect(classifyInterruption('Jarvis pare', '', { allowLegacyAlias: true }).type).toBe('stop');

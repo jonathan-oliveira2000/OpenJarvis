@@ -25,7 +25,7 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       manifest: {
-        name: 'M.E.G.A.',
+        name: 'M.E.G.A',
         short_name: 'MEGA',
         description: 'Máquina Extremamente Genial (Aparentemente)',
         lang: 'pt-BR',

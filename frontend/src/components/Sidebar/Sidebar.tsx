@@ -74,7 +74,7 @@ export function Sidebar() {
   };
 
   const navItems = [
-    { path: '/mega', icon: Orbit, label: 'M.E.G.A.' },
+    { path: '/mega', icon: Orbit, label: 'M.E.G.A' },
     { path: '/', icon: MessageSquare, label: 'Chat' },
     { path: '/dashboard', icon: BarChart3, label: 'Dashboard' },
     { path: '/data-sources', icon: Database, label: 'Data Sources' },

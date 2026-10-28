@@ -365,8 +365,8 @@ def create_app(
     )
 
     app = FastAPI(
-        title="M.E.G.A. API",
-        description="OpenAI-compatible API server for M.E.G.A., based on OpenJarvis",
+        title="M.E.G.A API",
+        description="OpenAI-compatible API server for M.E.G.A, based on OpenJarvis",
         version="0.1.0",
     )
 

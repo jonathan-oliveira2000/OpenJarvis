@@ -399,7 +399,7 @@ export function useJarvisVoice(): JarvisVoiceController {
     const store = useAppStore.getState();
     let conversationId = conversationRef.current;
     if (!conversationId || !store.conversations.some((conversation) => conversation.id === conversationId)) {
-      conversationId = store.createConversation(model, 'M.E.G.A. (voz)');
+      conversationId = store.createConversation(model, 'M.E.G.A (voz)');
     }
     conversationRef.current = conversationId;
     const userMessage: ChatMessage = {

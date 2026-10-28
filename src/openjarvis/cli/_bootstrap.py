@@ -73,7 +73,7 @@ def detect_cloud_keys() -> Optional[CloudProvider]:
 
 _DEFAULT_SOUL = (
     "# Agent Persona\n\n"
-    "You are M.E.G.A. (Máquina Extremamente Genial (Aparentemente)), "
+    "You are M.E.G.A (Máquina Extremamente Genial (Aparentemente)), "
     "a helpful personal AI assistant.\n"
 )
 _DEFAULT_MEMORY = "# Agent Memory\n\n"

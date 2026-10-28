@@ -1,6 +1,6 @@
 # Web authentication
 
-The web interface requires a user session before loading chat, the M.E.G.A. voice assistant,
+The web interface requires a user session before loading chat, the M.E.G.A voice assistant,
 history, settings, or other application pages. Authentication data is stored in
 `web-auth.db` under the OpenJarvis configuration directory (normally
 `~/.openjarvis`; `OPENJARVIS_HOME` and `XDG_DATA_HOME` can change that path).

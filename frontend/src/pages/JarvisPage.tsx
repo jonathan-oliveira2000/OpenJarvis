@@ -237,7 +237,7 @@ export function JarvisPage() {
             </label>
             <label className="flex items-center gap-2 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
               <input type="checkbox" checked={preferences.allowVoiceInterruption} onChange={(event) => update({ allowVoiceInterruption: event.currentTarget.checked })} />
-              Permitir interromper a M.E.G.A. falando
+              Permitir interromper a M.E.G.A falando
             </label>
             <label className="flex items-center gap-2 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
               <input type="checkbox" checked={preferences.interruptionRequiresWakeWord} onChange={(event) => update({ interruptionRequiresWakeWord: event.currentTarget.checked })} />

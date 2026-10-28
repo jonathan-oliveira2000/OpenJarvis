@@ -7,14 +7,14 @@ import {
   toSpeechText,
 } from './speechText';
 
-describe('M.E.G.A. speech text helpers', () => {
+describe('M.E.G.A speech text helpers', () => {
   it('removes markdown, URLs, emoji, symbols, and never reads code blocks', () => {
     expect(toSpeechText('**Olá!** [documentação](https://example.com) [referência][docs] 😊 `x+y`\n[docs]: https://example.com\n```ts\nconst x = 1;\n```'))
       .toBe('Olá! documentação referência x y O código está na tela de chat.');
   });
 
   it('speaks the written name as Mega instead of spelling its letters', () => {
-    expect(toSpeechText('M.E.G.A. responde. MEGA está ouvindo.'))
+    expect(toSpeechText('M.E.G.A responde. MEGA está ouvindo.'))
       .toBe('Mega responde. Mega está ouvindo.');
   });
 
